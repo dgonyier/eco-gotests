@@ -1,20 +1,15 @@
 package tests
 
 import (
-	"fmt"
-
 	"github.com/golang/glog"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/openshift-kni/eco-goinfra/pkg/bmh"
-	"github.com/openshift-kni/eco-goinfra/pkg/clients"
-	"github.com/openshift-kni/eco-goinfra/pkg/hive"
-	"github.com/openshift-kni/eco-goinfra/pkg/nodes"
 	"github.com/openshift-kni/eco-goinfra/pkg/reportxml"
 	"github.com/openshift-kni/eco-gotests/tests/cnf/ran/gitopsztp/internal/tsparams"
+	"github.com/openshift-kni/eco-gotests/tests/cnf/ran/internal/rancluster"
 	. "github.com/openshift-kni/eco-gotests/tests/cnf/ran/internal/raninittools"
 	"github.com/openshift-kni/eco-gotests/tests/cnf/ran/internal/version"
-	"github.com/openshift-kni/eco-gotests/tests/internal/cluster"
 )
 
 var _ = Describe("ZTP BIOS Configuration Tests", Label(tsparams.LabelBiosDayZeroTests), func() {
@@ -32,11 +27,11 @@ var _ = Describe("ZTP BIOS Configuration Tests", Label(tsparams.LabelBiosDayZero
 			Skip("ZTP BIOS configuration tests require ZTP version of least 4.17")
 		}
 
-		spokeClusterName, err = GetSpokeClusterName(HubAPIClient, Spoke1APIClient)
+		spokeClusterName, err = rancluster.GetSpokeClusterName(HubAPIClient, Spoke1APIClient)
 		Expect(err).ToNot(HaveOccurred(), "Failed to get SNO cluster name")
 		glog.V(tsparams.LogLevel).Infof("cluster name: %s", spokeClusterName)
 
-		nodeNames, err = GetNodeNames(Spoke1APIClient)
+		nodeNames, err = rancluster.GetNodeNames(Spoke1APIClient)
 		Expect(err).ToNot(HaveOccurred(), "Failed to get node names")
 		glog.V(tsparams.LogLevel).Infof("Node names: %v", nodeNames)
 
@@ -97,45 +92,3 @@ var _ = Describe("ZTP BIOS Configuration Tests", Label(tsparams.LabelBiosDayZero
 	})
 
 })
-
-// GetSpokeClusterName gets the spoke cluster name as string.
-func GetSpokeClusterName(hubAPIClient, spokeAPIClient *clients.Settings) (string, error) {
-	spokeClusterVersion, err := cluster.GetOCPClusterVersion(spokeAPIClient)
-	if err != nil {
-		return "", err
-	}
-
-	spokeClusterID := spokeClusterVersion.Object.Spec.ClusterID
-
-	clusterDeployments, err := hive.ListClusterDeploymentsInAllNamespaces(hubAPIClient)
-	if err != nil {
-		return "", err
-	}
-
-	for _, clusterDeploymentBuilder := range clusterDeployments {
-		if clusterDeploymentBuilder.Object.Spec.ClusterMetadata != nil &&
-			clusterDeploymentBuilder.Object.Spec.ClusterMetadata.ClusterID == string(spokeClusterID) {
-			return clusterDeploymentBuilder.Object.Spec.ClusterName, nil
-		}
-	}
-
-	return "", fmt.Errorf("could not find ClusterDeployment from provided API clients")
-}
-
-// GetNodeNames gets node names in cluster.
-func GetNodeNames(spokeAPIClient *clients.Settings) ([]string, error) {
-	nodeList, err := nodes.List(
-		spokeAPIClient,
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	nodeNames := []string{}
-	for _, node := range nodeList {
-		nodeNames = append(nodeNames, node.Definition.Name)
-	}
-
-	return nodeNames, nil
-}
