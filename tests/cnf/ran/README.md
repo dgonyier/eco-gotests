@@ -83,7 +83,7 @@ These inputs are all specific to the TALM pre-cache tests. They are also all opt
 
 This input is specific to the ZTP generator tests and is optional.
 
-- `ECO_CNF_RAN_ZTP_SITE_GENERATE_IMAGE`: Container image to use for generating CRs from the site config.
+* `ECO_CNF_RAN_ZTP_SITE_GENERATE_IMAGE`: Container image to use for generating CRs from the site config.
 
 ### Running the RAN test suites
 
@@ -127,7 +127,7 @@ If using more selective labels that do not include TALM pre-cache, such as with 
 
 #### Running the ZTP test suite
 
-```
+```bash
 # export KUBECONFIG=</path/to/spoke/kubeconfig>
 # export ECO_TEST_FEATURES=ran
 # export ECO_TEST_LABELS="ran-ztp && !no-container"
