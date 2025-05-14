@@ -510,13 +510,9 @@ func getClusterType(cluster *clients.Settings) {
 		for label := range nodes[nodeNum].Object.Labels {
 			glog.V(tsparams.LogLevel).Infof("DEBUG label: %s", label)
 
-			glog.V(tsparams.LogLevel).Infof("DEBUG ControlPlaneLabel: %s", RANConfig.ControlPlaneLabel)
-
 			if strings.Contains(label, RANConfig.ControlPlaneLabel) {
 				isControlPlane = true
 			}
-
-			glog.V(tsparams.LogLevel).Infof("DEBUG WorkerLabel: %s", RANConfig.WorkerLabel)
 
 			if strings.Contains(label, RANConfig.WorkerLabel) {
 				isWorker = true
