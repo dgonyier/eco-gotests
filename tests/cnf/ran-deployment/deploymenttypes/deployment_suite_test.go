@@ -5,12 +5,10 @@ import (
 	"path"
 	"runtime"
 	"testing"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/openshift-kni/eco-goinfra/pkg/clients"
-	"github.com/openshift-kni/eco-goinfra/pkg/namespace"
 	"github.com/openshift-kni/eco-goinfra/pkg/reportxml"
 	"github.com/openshift-kni/eco-gotests/tests/cnf/ran-deployment/deploymenttypes/internal/gitdetails"
 	"github.com/openshift-kni/eco-gotests/tests/cnf/ran-deployment/deploymenttypes/internal/tsparams"
@@ -41,22 +39,11 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = BeforeEach(func() {
-	By("deleting and recreating test namespace to ensure blank state")
-	for _, client := range []*clients.Settings{HubAPIClient, Spoke1APIClient} {
-		err := namespace.NewBuilder(client, tsparams.TestNamespace).DeleteAndWait(5 * time.Minute)
-		Expect(err).ToNot(HaveOccurred(), "Failed to delete Deployment types test namespace")
 
-		_, err = namespace.NewBuilder(client, tsparams.TestNamespace).Create()
-		Expect(err).ToNot(HaveOccurred(), "Failed to create deployment types test namespace")
-	}
 })
 
 var _ = AfterSuite(func() {
-	By("deleting test namespace")
-	for _, client := range []*clients.Settings{HubAPIClient, Spoke1APIClient} {
-		err := namespace.NewBuilder(client, tsparams.TestNamespace).DeleteAndWait(5 * time.Minute)
-		Expect(err).ToNot(HaveOccurred(), "Failed to delete deployment types test namespace")
-	}
+
 })
 
 var _ = JustAfterEach(func() {
