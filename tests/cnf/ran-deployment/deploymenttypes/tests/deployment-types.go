@@ -46,8 +46,8 @@ const (
 	kustKind                   string = "Kustomization"
 	imageInstallKind           string = "ImageClusterInstall"
 	agentInstallKind           string = "AgentClusterInstall"
-	// labelWorker                string = "node-role.kubernetes.io/worker"
-	// labelControlPlane          string = "node-role.kubernetes.io/control-plane"
+	// labelWorker                string = "node-role.kubernetes.io/worker" ...
+	// labelControlPlane          string = "node-role.kubernetes.io/control-plane" ...
 )
 
 var (
