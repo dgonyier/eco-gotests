@@ -42,12 +42,12 @@ const (
 	snoPlusWorker              string = "SNO+Worker Cluster"
 	threeNodeCluster           string = "3 Node Cluster"
 	standardCluster            string = "Standard Cluster"
-	labelWorker                string = "node-role.kubernetes.io/worker"
-	labelControlPlane          string = "node-role.kubernetes.io/control-plane"
 	kustSubstring              string = "/kustomization.y"
 	kustKind                   string = "Kustomization"
 	imageInstallKind           string = "ImageClusterInstall"
 	agentInstallKind           string = "AgentClusterInstall"
+	// labelWorker                string = "node-role.kubernetes.io/worker"
+	// labelControlPlane          string = "node-role.kubernetes.io/control-plane"
 )
 
 var (
@@ -510,11 +510,15 @@ func getClusterType(cluster *clients.Settings) {
 		for label := range nodes[nodeNum].Object.Labels {
 			glog.V(tsparams.LogLevel).Infof("DEBUG label: %s", label)
 
-			if strings.Contains(label, labelControlPlane) {
+			glog.V(tsparams.LogLevel).Infof("DEBUG ControlPlaneLabel: %s", RANConfig.ControlPlaneLabel)
+
+			if strings.Contains(label, RANConfig.ControlPlaneLabel) {
 				isControlPlane = true
 			}
 
-			if strings.Contains(label, labelWorker) {
+			glog.V(tsparams.LogLevel).Infof("DEBUG WorkerLabel: %s", RANConfig.WorkerLabel)
+
+			if strings.Contains(label, RANConfig.WorkerLabel) {
 				isWorker = true
 			}
 		}
