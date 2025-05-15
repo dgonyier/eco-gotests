@@ -2,7 +2,6 @@
 package tests
 
 import (
-	// "regexp" ...
 	"fmt"
 	"os"
 	"regexp"
@@ -16,7 +15,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	// "github.com/openshift-kni/eco-goinfra/blob/main/pkg/ibi" ...
 	"github.com/openshift-kni/eco-goinfra/pkg/clients"
 	"github.com/openshift-kni/eco-goinfra/pkg/hive"
 	"github.com/openshift-kni/eco-goinfra/pkg/nodes"
@@ -46,12 +44,9 @@ const (
 	kustKind                   string = "Kustomization"
 	imageInstallKind           string = "ImageClusterInstall"
 	agentInstallKind           string = "AgentClusterInstall"
-	// labelWorker                string = "node-role.kubernetes.io/worker" ...
-	// labelControlPlane          string = "node-role.kubernetes.io/control-plane" ...
 )
 
 var (
-	// reKind            = regexp.MustCompile(`kind *: +['"]?([A-Za-z]+)['"]?`) ...
 	reHubSideTemplate  = regexp.MustCompile(`\{\{\s*hub[^\r\n]+hub\s*\}\}`)
 	hasHubSideTemplate = false
 	isClusterInstance  = false
@@ -63,15 +58,12 @@ var (
 	isSnoPlusWorker    = false
 	isThreeNodeCluster = false
 	isStandardCluster  = false
-	// kustSections       [3]string = [3]string{"generators", "resources", "patches"} ...
+
 	ignorePaths    [3]string = [3]string{"source-crs/", "custom-crs/", "extra-manifest/"}
 	isAgentInstall           = false
 	isImageInstall           = false
-	/*
-		isIBI              = false
-		isAI               = false
-	*/
 )
+
 var _ = FDescribe("Cluster Deployment Types Tests", Ordered, Label(tsparams.LabelDeploymentTypeTestCases), func() {
 	var (
 		siteconfigRepo         *git.Repository
@@ -79,9 +71,6 @@ var _ = FDescribe("Cluster Deployment Types Tests", Ordered, Label(tsparams.Labe
 		pathSiteConfig         string
 		pathPolicies           string
 		clusterDeploymentsList []*hive.ClusterDeploymentBuilder
-		// clustersPath       = tsparams.ArgoCdAppDetails[tsparams.ArgoCdClustersAppName].Path
-		// policiesPath       = tsparams.ArgoCdAppDetails[tsparams.ArgoCdClustersAppName].Path
-
 	)
 
 	BeforeAll(func() {
@@ -113,7 +102,6 @@ var _ = FDescribe("Cluster Deployment Types Tests", Ordered, Label(tsparams.Labe
 				getClusterType(Spoke2APIClient)
 				getDeploymentType(Spoke2APIClient, clusterDeploymentsList)
 			}
-			// getDeploymentType(Spoke2APIClient, clusterDeploymentsList)
 		} else {
 			glog.V(tsparams.LogLevel).Infof("Second cluster KUBECONFIG not available")
 		}
@@ -143,8 +131,6 @@ var _ = FDescribe("Cluster Deployment Types Tests", Ordered, Label(tsparams.Labe
 
 	FDescribeTable("Checking install methods",
 		func(methodKind *bool, methodValue string, foundKind *bool, kindValue string) {
-			// glog.V(tsparams.LogLevel).Infof("foundKind %v", *foundKind)
-			// glog.V(tsparams.LogLevel).Infof("kindValue %v", kindValue)
 			if !*foundKind {
 				glog.V(tsparams.LogLevel).Infof("Not %s install kind", kindValue)
 				Skip(fmt.Sprintf("Not %s install kind", kindValue))
@@ -167,8 +153,6 @@ var _ = FDescribe("Cluster Deployment Types Tests", Ordered, Label(tsparams.Labe
 
 	FDescribeTable("Checking deployment kinds",
 		func(foundKind *bool, kindValue string) {
-			// glog.V(tsparams.LogLevel).Infof("foundKind %v", *foundKind)
-			// glog.V(tsparams.LogLevel).Infof("kindValue %v", kindValue)
 			if !*foundKind {
 				glog.V(tsparams.LogLevel).Infof("Not %s spoke deployment", kindValue)
 				Skip(fmt.Sprintf("Not %s spoke deployment", kindValue))
@@ -180,14 +164,10 @@ var _ = FDescribe("Cluster Deployment Types Tests", Ordered, Label(tsparams.Labe
 			&isMultiCluster, multiCluster, reportxml.ID("80498")),
 		Entry(fmt.Sprintf("When deployment method is %s", siteconfigKind),
 			&isSiteConfig, siteconfigKind, reportxml.ID("80493")),
-		// Entry(fmt.Sprintf("When deployment is %s", clusterinstanceKind),
-		// 	 &isClusterInstance, clusterinstanceKind, reportxml.ID("80494")),
 	)
 
 	FDescribeTable("Checking policy kinds",
 		func(foundKind *bool, foundHST *bool, checkForHST bool, kindValue string) {
-			// glog.V(tsparams.LogLevel).Infof("foundKind %v", *foundKind)
-			// glog.V(tsparams.LogLevel).Infof("kindValue %v", kindValue)
 			if !*foundKind {
 				glog.V(tsparams.LogLevel).Infof("Not %s spoke deployment", kindValue)
 				Skip(fmt.Sprintf("Not %s spoke deployment", kindValue))
@@ -223,8 +203,6 @@ var _ = FDescribe("Cluster Deployment Types Tests", Ordered, Label(tsparams.Labe
 
 	FDescribeTable("Checking cluster types",
 		func(foundType *bool, typeValue string) {
-			// glog.V(tsparams.LogLevel).Infof("foundKind %v", *foundKind)
-			// glog.V(tsparams.LogLevel).Infof("kindValue %v", kindValue)
 			if !*foundType {
 				glog.V(tsparams.LogLevel).Infof("Not cluster type %s", typeValue)
 				Skip(fmt.Sprintf("Not cluster type %s", typeValue))
@@ -337,23 +315,12 @@ func getFilesInfo(repo *git.Repository, path string) {
 
 		if strings.HasSuffix(fileEntry.Name, ".yaml") || strings.HasSuffix(fileEntry.Name, ".yml") {
 			glog.V(tsparams.LogLevel).Infof("Path: %s", fileEntry.Name)
-			// lines, err := fileEntry.Lines()
-			// Expect(err).ToNot(HaveOccurred(), "Failed to get file lines")
-			// glog.V(tsparams.LogLevel).Infof("First line: %s", lines[0])
 
 			content, err := fileEntry.Contents()
 			Expect(err).ToNot(HaveOccurred(), "Failed to get file content")
 
 			// Get YAML Kind value.
 			kind := getYAMLKind([]byte(content), fileEntry.Name)
-
-			// DEBUG Get YAML top-level fields
-			// switch {
-			// case kind == kustKind:
-			//	 getKustFields([]byte(content), fileEntry.Name)
-			// case len(kind) > 0:
-			// 	 getSpecFields([]byte(content), fileEntry.Name)
-			// }
 
 			glog.V(tsparams.LogLevel).Infof("Kind from YAML: %s", kind)
 
@@ -393,7 +360,6 @@ func getYAMLKind(fileData []byte, fileName string) string {
 	kind, result := fileContent["kind"].(string)
 	if !result {
 		glog.V(tsparams.LogLevel).Infof("Failed to determine kind from file %s", fileName)
-		// Expect(ok).To(BeTrue(), "Failed to cast file %s kind to string", fileName)
 		if strings.Contains(fileName, kustSubstring) {
 			glog.V(tsparams.LogLevel).Infof("Assuming Kind: %s for file %#s", kustKind, fileName)
 
@@ -406,90 +372,27 @@ func getYAMLKind(fileData []byte, fileName string) string {
 	return kind
 }
 
-// Get top-level fields from Kustomization CR, if they exist
-// func getKustFields(fileData []byte, fileName string) {
-// 	fileContent := make(map[string]any)
-// 	err := yaml.Unmarshal(fileData, &fileContent)
-// 	if err != nil {
-// 		glog.V(tsparams.LogLevel).Infof("Unable to unmarshal file %s as YAML ", fileName)
-// 	}
-// 	Expect(err).ToNot(HaveOccurred(), "Failed to unmarshal file %s as YAML", fileName)
-
-// 	for key, val := range fileContent {
-// 		glog.V(tsparams.LogLevel).Infof("DEBUG key %v , value %#v ", key, val)
-// 		for _, section := range kustSections {
-// 			if strings.HasPrefix(key, section) {
-// 				// contents, result := fileContent[key].(map[any]any)
-// 				contents, result := fileContent[key].([]any)
-// 				if !result {
-// 					glog.V(tsparams.LogLevel).Infof("Failed to get %s from file %s", section, fileName)
-// 					// Expect(ok).To(BeTrue(), "Failed to cast file %s kind to []any]", fileName)
-// 					// return ""
-// 					continue
-// 				}
-// 				for kkey, vval := range contents {
-// 					glog.V(tsparams.LogLevel).Infof("DEBUG kust: key %v , value %#v ", kkey, vval)
-// 				}
-// 			}
-// 		}
-// 	}
-// }
-
-// // Get spec fields if they exist
-// func getSpecFields(fileData []byte, fileName string) {
-// 	fileContent := make(map[string]any)
-// 	err := yaml.Unmarshal(fileData, &fileContent)
-// 	Expect(err).ToNot(HaveOccurred(), "Failed to unmarshal file %s as yaml", fileName)
-
-// 	for key, val := range fileContent {
-// 		glog.V(tsparams.LogLevel).Infof("DEBUG key %v , value %#v ", key, val)
-
-// 		if strings.HasPrefix(key, "spec") {
-// 			spec, result := fileContent["spec"].(map[any]any)
-// 			if !result {
-// 				glog.V(tsparams.LogLevel).Infof("Failed to get spec from file %s", fileName)
-// 				// Expect(ok).To(BeTrue(), "Failed to cast file %s kind to string", fileName)
-// 				return
-// 			}
-
-// 			for kkey, vval := range spec {
-// 				glog.V(tsparams.LogLevel).Infof("DEBUG spec: key %v , value %v ", kkey, vval)
-// 			}
-// 		}
-// 	}
-// }
-
 // Check file for hub-side templating syntax.
 func checkForHubSideTemplate(content []byte, fileName string) {
 	if reHubSideTemplate.Match(content) {
-		glog.V(tsparams.LogLevel).Infof("DEBUG Hub-site templating syntax found in %s", fileName)
-
 		hasHubSideTemplate = true
 	}
 }
 
 // Determine the cluster type as one of: standard, 3node, SNO, SNO+Worker.
 func getClusterType(cluster *clients.Settings) {
-	// roleList, err := HubAPIClient.Client.List()
-	// nodes, err := nodes.List(hub, metav1.ListOptions{
-	//	LabelSelector: labels.Set(labelMap).String(),
-	// })
-	// glog.V(tsparams.LogLevel).Infof("DEBUG hub: %v", hub)
-	// Hub cluster.
 	var (
 		bothCount                = 0
 		workerCount              = 0
 		controlPlaneCount        = 0
 		isControlPlane, isWorker bool
 	)
-	// This is pulled from ztp-bios-day-zero.go. TODO move to rancluster?
-	// clusterName, err := GetSpokeClusterName(HubAPIClient, cluster) ...
+
 	klusterlet, err := ocm.PullKlusterlet(cluster, ocm.KlusterletName)
 	Expect(err).ToNot(HaveOccurred(), "Failed to get klusterlet")
 
 	clusterName := klusterlet.Object.Spec.ClusterName
 	Expect(clusterName).ToNot(BeEmpty(), "Failed to get clustername")
-	// Expect(err).ToNot(HaveOccurred(), "Failed to get clustername") ...
 
 	if cluster.KubeconfigPath == "" {
 		glog.V(tsparams.LogLevel).Infof("Cluster %s KUBECONFIG is not availabled", clusterName)
@@ -502,13 +405,9 @@ func getClusterType(cluster *clients.Settings) {
 
 	for nodeNum := range nodes {
 		nodeName := nodes[nodeNum].Definition.Name
-		// labels := nodesh[nodeNum].Object.Labels
 		isControlPlane, isWorker = false, false
 
-		glog.V(tsparams.LogLevel).Infof("DEBUG Labels: %+v", nodes[nodeNum].Object.Labels)
-
 		for label := range nodes[nodeNum].Object.Labels {
-			glog.V(tsparams.LogLevel).Infof("DEBUG label: %s", label)
 
 			if strings.Contains(label, RANConfig.ControlPlaneLabel) {
 				isControlPlane = true
@@ -547,20 +446,16 @@ func getClusterType(cluster *clients.Settings) {
 }
 
 func getDeploymentType(cluster *clients.Settings, clusterDeploymentsList []*hive.ClusterDeploymentBuilder) {
-	// This is pulled from ztp-bios-day-zero.go. TODO move to rancluster?
-	// clusterName, err := GetSpokeClusterName(HubAPIClient, cluster) ...
 	klusterlet, err := ocm.PullKlusterlet(cluster, ocm.KlusterletName)
 	Expect(err).ToNot(HaveOccurred(), "Failed to get klusterlet")
 
 	clusterName := klusterlet.Object.Spec.ClusterName
 	Expect(clusterName).ToNot(BeEmpty(), "Failed to get clustername")
-	// Expect(err).ToNot(HaveOccurred(), "Failed to get clustername") ...
 
 	for _, clusterDeployment := range clusterDeploymentsList {
 		deploymentClusterName := clusterDeployment.Object.Spec.ClusterName
 		clusterDeploymentName := clusterDeployment.Object.GetObjectMeta().GetName()
 
-		glog.V(tsparams.LogLevel).Infof("DEBUG clusterDeploymentName: %v", clusterDeploymentName)
 		Expect(clusterName).ToNot(BeEmpty(),
 			fmt.Sprintf("clusterdeployment %s does not have ClusterName value",
 				clusterDeploymentName))
@@ -570,17 +465,14 @@ func getDeploymentType(cluster *clients.Settings, clusterDeploymentsList []*hive
 		}
 
 		installKind := clusterDeployment.Object.Spec.ClusterInstallRef.Kind
-		glog.V(tsparams.LogLevel).Infof("DEBUG ClusterInstallRef.Kind: %v", installKind)
 		Expect(installKind).ToNot(BeEmpty(),
 			fmt.Sprintf("clusterdeployment %s does not have ClusterInstallRef.Kind value",
 				clusterDeploymentName))
 
 		switch installKind {
 		case imageInstallKind:
-			// glog.V(tsparams.LogLevel).Infof("Install kind is  %s", imageInstallKind)
 			isImageInstall = true
 		case agentInstallKind:
-			// glog.V(tsparams.LogLevel).Infof("Install kind is  %s", agentInstallKind)
 			isAgentInstall = true
 		}
 	}
