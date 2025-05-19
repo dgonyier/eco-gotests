@@ -6,7 +6,7 @@ import (
 
 const (
 	// Label represents the label for the ran test cases.
-	Label = "ran"
+	Label = "ran-deployment"
 	/*
 		// LabelNoContainer is the label for RAN test cases that should not be executed in a container.
 		LabelNoContainer = "no-container"
