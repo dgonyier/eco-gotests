@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/openshift-kni/eco-goinfra/pkg/argocd"
-	"github.com/openshift-kni/eco-gotests/tests/cnf/ran-deployment/deploymenttypes/internal/tsparams"
 )
 
 // checkAppSpecSource checks that the app.Definition.Spec.Source tree exists.
@@ -71,6 +70,7 @@ func GetGitTargetRevision(app *argocd.ApplicationBuilder) (string, error) {
 
 // UpdateAndWaitForSync appends elements to the git path of the provided Argo CD application and waits for the source to
 // be updated. The synced parameter indicates whether to wait for the application to be in a synced state or not.
+/*
 func UpdateAndWaitForSync(app *argocd.ApplicationBuilder, synced bool, elements ...string) error {
 	_, err := app.WithGitPathAppended(elements...).Update(true)
 	if err != nil {
@@ -84,3 +84,4 @@ func UpdateAndWaitForSync(app *argocd.ApplicationBuilder, synced bool, elements 
 
 	return nil
 }
+*/
