@@ -115,15 +115,25 @@ var _ = Describe("Cluster Deployment Types Tests", Ordered, Label(tsparams.Label
 			HubAPIClient, tsparams.ArgoCdPoliciesAppName, ranparam.OpenshiftGitOpsNamespace)
 		Expect(err).ToNot(HaveOccurred(), "Failed to get the policies app")
 
-		pathPolicies, err = gitdetails.GetGitPath(policiesApp)
-		Expect(err).ToNot(HaveOccurred(), "Failed to get the policies app git path")
+		// pathPolicies, err = gitdetails.GetGitPath(policiesApp)
+		// Expect(err).ToNot(HaveOccurred(), "Failed to get the policies app git path")
+
+		policiesSource, err := gitdetails.GetGitSource(policiesApp)
+		Expect(err).ToNot(HaveOccurred(), "Failed to get the policies app git source")
+
+		pathPolicies = policiesSource.Path
 
 		clustersApp, err = argocd.PullApplication(
 			HubAPIClient, tsparams.ArgoCdClustersAppName, ranparam.OpenshiftGitOpsNamespace)
 		Expect(err).ToNot(HaveOccurred(), "Failed to get the clusters app")
 
-		pathSiteConfig, err = gitdetails.GetGitPath(clustersApp)
-		Expect(err).ToNot(HaveOccurred(), "Failed to get the clusters app git path")
+		// pathSiteConfig, err = gitdetails.GetGitPath(clustersApp)
+		// Expect(err).ToNot(HaveOccurred(), "Failed to get the clusters app git path")
+
+		clustersSource, err := gitdetails.GetGitSource(clustersApp)
+		Expect(err).ToNot(HaveOccurred(), "Failed to get the clusters app git source")
+
+		pathSiteConfig = clustersSource.Path
 
 		glog.V(tsparams.LogLevel).Infof("Successful retreival of apps git details")
 
@@ -258,50 +268,57 @@ func rmGitCloneDirs() {
 // clusters and policies apps are cloned separately to allow for
 // the case where they point to different repos/branches/paths.
 func gitCloneToDirs() (siteconfigRepo *git.Repository, policiesRepo *git.Repository) {
-	remoteSiteConfig, err := gitdetails.GetGitRepoURL(clustersApp)
-	Expect(err).ToNot(HaveOccurred(), "Failed to get clusters app git URL")
+	clustersSource, err := gitdetails.GetGitSource(clustersApp)
+	Expect(err).ToNot(HaveOccurred(), "Failed to get clusters app git source details")
 
-	branchSiteConfig, err := gitdetails.GetGitTargetRevision(clustersApp)
-	Expect(err).ToNot(HaveOccurred(), "Failed to get clusters app git branch")
+	policiesSource, err := gitdetails.GetGitSource(policiesApp)
+	Expect(err).ToNot(HaveOccurred(), "Failed to get policies app git source details")
+	/*
+		remoteSiteConfig, err := gitdetails.GetGitRepoURL(clustersApp)
+		Expect(err).ToNot(HaveOccurred(), "Failed to get clusters app git URL")
 
-	pathSiteConfig, err := gitdetails.GetGitPath(clustersApp)
-	Expect(err).ToNot(HaveOccurred(), "Failed to get clusters app git path")
+		branchSiteConfig, err := gitdetails.GetGitTargetRevision(clustersApp)
+		Expect(err).ToNot(HaveOccurred(), "Failed to get clusters app git branch")
 
-	remotePolicies, err := gitdetails.GetGitRepoURL(policiesApp)
-	Expect(err).ToNot(HaveOccurred(), "Failed to get policies app git URL")
+		pathSiteConfig, err := gitdetails.GetGitPath(clustersApp)
+		Expect(err).ToNot(HaveOccurred(), "Failed to get clusters app git path")
 
-	branchPolicies, err := gitdetails.GetGitTargetRevision(policiesApp)
-	Expect(err).ToNot(HaveOccurred(), "Failed to get policies app git branch")
+		remotePolicies, err := gitdetails.GetGitRepoURL(policiesApp)
+		Expect(err).ToNot(HaveOccurred(), "Failed to get policies app git URL")
 
-	pathPolicies, err := gitdetails.GetGitPath(policiesApp)
-	Expect(err).ToNot(HaveOccurred(), "Failed to get policies app git path")
+		branchPolicies, err := gitdetails.GetGitTargetRevision(policiesApp)
+		Expect(err).ToNot(HaveOccurred(), "Failed to get policies app git branch")
 
+		pathPolicies, err := gitdetails.GetGitPath(policiesApp)
+		Expect(err).ToNot(HaveOccurred(), "Failed to get policies app git path")
+	*/
 	siteconfigRepo, err = git.PlainClone(gitSiteConfigCloneDir, false, &git.CloneOptions{
-		URL:           remoteSiteConfig,
+		URL:           clustersSource.RepoURL,
 		Tags:          git.NoTags,
-		ReferenceName: plumbing.ReferenceName(branchSiteConfig),
+		ReferenceName: plumbing.ReferenceName(clustersSource.TargetRevision),
 		Depth:         1,
 		SingleBranch:  true,
 		Progress:      nil,
 	})
 	Expect(err).ToNot(HaveOccurred(), "Failed to git clone siteconfig repo %s branch %s to directory %s",
-		remoteSiteConfig, branchSiteConfig, gitSiteConfigCloneDir)
+		clustersSource.RepoURL, clustersSource.TargetRevision, gitSiteConfigCloneDir)
 	glog.V(tsparams.LogLevel).Infof("Successful git clone of sitconfig repo %s branch %s",
-		remoteSiteConfig, branchSiteConfig)
-	glog.V(tsparams.LogLevel).Infof("Path in worktree: %s", pathSiteConfig)
+		clustersSource.RepoURL, clustersSource.TargetRevision)
+	glog.V(tsparams.LogLevel).Infof("Path in worktree: %s", clustersSource.Path)
 
 	policiesRepo, err = git.PlainClone(gitPolicyTemplatesCloneDir, false, &git.CloneOptions{
-		URL:           remotePolicies,
+		URL:           policiesSource.RepoURL,
 		Tags:          git.NoTags,
-		ReferenceName: plumbing.ReferenceName(branchPolicies),
+		ReferenceName: plumbing.ReferenceName(policiesSource.TargetRevision),
 		Depth:         1,
 		SingleBranch:  true,
 		Progress:      nil,
 	})
 	Expect(err).ToNot(HaveOccurred(), "Failed to git clone policies repo %s branch %s to directory %s",
-		remotePolicies, remotePolicies, gitPolicyTemplatesCloneDir)
-	glog.V(tsparams.LogLevel).Infof("Successful git clone of policies repo %s branch %s", remotePolicies, branchPolicies)
-	glog.V(tsparams.LogLevel).Infof("Path in worktree: %s", pathPolicies)
+		policiesSource.RepoURL, policiesSource.TargetRevision, gitPolicyTemplatesCloneDir)
+	glog.V(tsparams.LogLevel).Infof("Successful git clone of policies repo %s branch %s",
+		policiesSource.RepoURL, policiesSource.TargetRevision)
+	glog.V(tsparams.LogLevel).Infof("Path in worktree: %s", policiesSource.Path)
 
 	return siteconfigRepo, policiesRepo
 }
