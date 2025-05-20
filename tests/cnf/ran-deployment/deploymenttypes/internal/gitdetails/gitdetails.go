@@ -4,68 +4,89 @@ import (
 	"fmt"
 
 	"github.com/openshift-kni/eco-goinfra/pkg/argocd"
+	"github.com/openshift-kni/eco-goinfra/pkg/schemes/argocd/argocdtypes/v1alpha1"
 )
 
+/*
 // checkAppSpecSource checks that the app.Definition.Spec.Source tree exists.
-func checkAppSpecSource(app *argocd.ApplicationBuilder) error {
-	if app == nil {
-		return fmt.Errorf("application is nil")
-	}
 
-	if app.Definition == nil {
-		return fmt.Errorf("application definition is nil")
-	}
+	func checkAppSpecSource(app *argocd.ApplicationBuilder) error {
+		if app == nil {
+			return fmt.Errorf("application is nil")
+		}
 
-	if app.Definition.Spec.Source == nil {
-		return fmt.Errorf("application source is nil")
-	}
+		if app.Definition == nil {
+			return fmt.Errorf("application definition is nil")
+		}
 
-	return nil
-}
+		if app.Definition.Spec.Source == nil {
+			return fmt.Errorf("application source is nil")
+		}
+
+		return nil
+	}
 
 // GetGitPath retrieves the git path from the provided Argo CD application. It returns an error if it encounters any nil
 // pointers trying to access the source path.
-func GetGitPath(app *argocd.ApplicationBuilder) (string, error) {
-	err := checkAppSpecSource(app)
-	if err != nil {
-		return "", err
-	}
 
-	if len(app.Definition.Spec.Source.Path) == 0 {
-		return "", fmt.Errorf("application git Path is empty")
-	}
+	func GetGitPath(app *argocd.ApplicationBuilder) (string, error) {
+		err := checkAppSpecSource(app)
+		if err != nil {
+			return "", err
+		}
 
-	return app.Definition.Spec.Source.Path, nil
-}
+		if len(app.Definition.Spec.Source.Path) == 0 {
+			return "", fmt.Errorf("application git Path is empty")
+		}
+
+		return app.Definition.Spec.Source.Path, nil
+	}
 
 // GetGitRepoURL retrieves the git URL from the provided Argo CD application. It returns an error
 // if it encounters any nil pointers trying to access the source path.
-func GetGitRepoURL(app *argocd.ApplicationBuilder) (string, error) {
-	err := checkAppSpecSource(app)
-	if err != nil {
-		return "", err
-	}
 
-	if len(app.Definition.Spec.Source.RepoURL) == 0 {
-		return "", fmt.Errorf("application git RepoURL is empty")
-	}
+	func GetGitRepoURL(app *argocd.ApplicationBuilder) (string, error) {
+		err := checkAppSpecSource(app)
+		if err != nil {
+			return "", err
+		}
 
-	return app.Definition.Spec.Source.RepoURL, nil
-}
+		if len(app.Definition.Spec.Source.RepoURL) == 0 {
+			return "", fmt.Errorf("application git RepoURL is empty")
+		}
+
+		return app.Definition.Spec.Source.RepoURL, nil
+	}
 
 // GetGitTargetRevision retrieves the git revision from the provided Argo CD application. It returns an error if it
 // encounters any nil pointers trying to access the source path.
-func GetGitTargetRevision(app *argocd.ApplicationBuilder) (string, error) {
-	err := checkAppSpecSource(app)
-	if err != nil {
-		return "", err
+
+	func GetGitTargetRevision(app *argocd.ApplicationBuilder) (string, error) {
+		err := checkAppSpecSource(app)
+		if err != nil {
+			return "", err
+		}
+
+		if len(app.Definition.Spec.Source.TargetRevision) == 0 {
+			return "", fmt.Errorf("application git TargetRevision is empty")
+		}
+
+		return app.Definition.Spec.Source.TargetRevision, nil
+	}
+*/
+func GetGitSource(app *argocd.ApplicationBuilder) (*v1alpha1.ApplicationSource, error) {
+	appSourceInfo := app.Object.Spec.GetSource()
+
+	switch {
+	case len(appSourceInfo.RepoURL) == 0:
+		return nil, fmt.Errorf("%s application git RepoURL is empty", app.Object.Name)
+	case len(appSourceInfo.Path) == 0:
+		return nil, fmt.Errorf("%s application it Path is empty", app.Object.Name)
+	case len(appSourceInfo.TargetRevision) == 0:
+		return nil, fmt.Errorf("%s application git TargetRevision is empty", app.Object.Name)
 	}
 
-	if len(app.Definition.Spec.Source.TargetRevision) == 0 {
-		return "", fmt.Errorf("application git TargetRevision is empty")
-	}
-
-	return app.Definition.Spec.Source.TargetRevision, nil
+	return &appSourceInfo, nil
 }
 
 // UpdateAndWaitForSync appends elements to the git path of the provided Argo CD application and waits for the source to
