@@ -156,7 +156,7 @@ var _ = Describe("Cluster Deployment Types Tests", Ordered, Label(tsparams.Label
 		rmGitCloneDirs()
 	})
 
-	FIt(fmt.Sprintf("When deployment is %s", multiCluster), reportxml.ID("80498"), func() {
+	It(fmt.Sprintf("When deployment is %s", multiCluster), reportxml.ID("80498"), func() {
 		multiple := &isMultiCluster
 
 		Expect(*multiple == singleCluster || *multiple == multiCluster).To(BeTrueBecause(
@@ -169,7 +169,7 @@ var _ = Describe("Cluster Deployment Types Tests", Ordered, Label(tsparams.Label
 		By("Deployment is multi cluster")
 	})
 
-	FDescribeTable("Checking install method",
+	DescribeTable("Checking install method",
 		func(methodValue *deploymentType, kindValue deploymentType) {
 
 			Expect(*methodValue).ToNot(BeEmpty(), "deployMethod should not be empty")
@@ -189,7 +189,7 @@ var _ = Describe("Cluster Deployment Types Tests", Ordered, Label(tsparams.Label
 		Entry(nil, &deploymentMethod, siteconfigKind, reportxml.ID("80493")),
 	)
 
-	FDescribeTable("Checking policy kind",
+	DescribeTable("Checking policy kind",
 		func(policyValue *policyType, kindValue policyType) {
 
 			Expect(*policyValue).ToNot(BeEmpty(), "policyTemplate should not be empty")
@@ -210,7 +210,7 @@ var _ = Describe("Cluster Deployment Types Tests", Ordered, Label(tsparams.Label
 		Entry(nil, &policyTemplate, acmpgHubSideTempl, reportxml.ID("80503")),
 	)
 
-	FDescribeTable("Checking cluster type",
+	DescribeTable("Checking cluster type",
 		func(clusterValue *clusterType, kindValue clusterType) {
 
 			Expect(*clusterValue).ToNot(BeEmpty(), "clusterKind should not be empty")
