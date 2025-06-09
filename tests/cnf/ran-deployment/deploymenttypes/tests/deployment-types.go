@@ -443,7 +443,6 @@ func getClusterType(cluster *clients.Settings) {
 		if isWorker {
 			workerCount++
 		}
-
 	}
 
 	glog.V(tsparams.LogLevel).Infof(
@@ -461,8 +460,8 @@ func getClusterType(cluster *clients.Settings) {
 	}
 }
 
-// getDeploymentType determines the deployment type as one of
-// SiteConfig with AgentClusterInstall, ClusterInstance with AgentClusterInstall, or ClusterInstance with ImageClusterInstall.
+// getDeploymentType determines the deployment type as one of: SiteConfig with AgentClusterInstall,
+// ClusterInstance with AgentClusterInstall, or ClusterInstance with ImageClusterInstall.
 func getDeploymentType(cluster *clients.Settings, clusterDeploymentsList []*hive.ClusterDeploymentBuilder) {
 	if deploymentMethod != siteconfigKind {
 		klusterlet, err := ocm.PullKlusterlet(cluster, ocm.KlusterletName)
