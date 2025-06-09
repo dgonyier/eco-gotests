@@ -2,7 +2,6 @@ package version
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/golang/glog"
@@ -12,8 +11,6 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	"k8s.io/client-go/tools/clientcmd"
 )
-
-var inputStringRegex = regexp.MustCompile(`(\d+)\.(\d+)`)
 
 // GetOCPVersion uses the cluster version on a given cluster to find the latest OCP version, returning the desired
 // version if the latest version could not be found.

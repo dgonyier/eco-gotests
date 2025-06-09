@@ -395,10 +395,7 @@ func getYAMLKind(fileData []byte, fileName string) string {
 
 // Check file for hub-side templating syntax.
 func checkForHubSideTemplate(content []byte) bool {
-	if reHubSideTemplate.Match(content) {
-		return true
-	}
-	return false
+	return reHubSideTemplate.Match(content)
 }
 
 // getCluterType determines the cluster type as one of: standard, 3node, SNO, SNO+Worker.
@@ -464,7 +461,7 @@ func getClusterType(cluster *clients.Settings) {
 	}
 }
 
-// getDeploymentType determines the deployment type as one of:
+// getDeploymentType determines the deployment type as one of
 // SiteConfig with AgentClusterInstall, ClusterInstance with AgentClusterInstall, or ClusterInstance with ImageClusterInstall.
 func getDeploymentType(cluster *clients.Settings, clusterDeploymentsList []*hive.ClusterDeploymentBuilder) {
 	if deploymentMethod != siteconfigKind {

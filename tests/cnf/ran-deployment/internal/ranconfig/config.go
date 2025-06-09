@@ -89,6 +89,7 @@ func (ranconfig *RANConfig) newSpoke1Config() {
 
 	if spoke1Kubeconfig := ranconfig.Spoke1Config.Spoke1Kubeconfig; spoke1Kubeconfig != "" {
 		ranconfig.Spoke1Config.Spoke1APIClient = clients.New(ranconfig.Spoke1Config.Spoke1Kubeconfig)
+
 		spoke1Name, err := version.GetClusterName(spoke1Kubeconfig)
 		if err != nil {
 			glog.V(ranparam.LogLevel).Infof("Failed to get spoke 1 name from kubeconfig at %s: %v", spoke1Kubeconfig, err)
