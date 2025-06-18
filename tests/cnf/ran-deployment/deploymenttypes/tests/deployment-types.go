@@ -287,11 +287,11 @@ func getFilesInfo(repo *git.Repository, path string) (tsparams.DeploymentType, t
 	// subtree, err = tree.Path()
 
 	err = subtree.Files().ForEach(func(fileEntry *object.File) error {
-		if !strings.HasPrefix(fileEntry.Name, path) {
-			glog.V(tsparams.LogLevel).Infof("Skipping file: %s (outside of path: %s)", fileEntry.Name, path)
+		// if !strings.HasPrefix(fileEntry.Name, path) {
+		// 	glog.V(tsparams.LogLevel).Infof("Skipping file: %s (outside of path: %s)", fileEntry.Name, path)
 
-			return nil
-		}
+		// 	return nil
+		// }
 
 		for _, ignorePath := range ignorePaths {
 			if strings.Contains(fileEntry.Name, ignorePath) {
