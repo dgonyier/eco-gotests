@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	kustSubstring              string = "/kustomization.y"
+	kustSubstring              string = "kustomization.y"
 	kustKind                   string = "Kustomization"
 	gitSiteConfigCloneDir      string = "ztp-deployment-siteconfig"
 	gitPolicyTemplatesCloneDir string = "ztp-deployment-policy-templates"
@@ -38,7 +38,13 @@ const (
 
 var (
 	reHubSideTemplate           = regexp.MustCompile(`\{\{\s*hub[^\r\n]+hub\s*\}\}`)
-	ignorePaths       [4]string = [4]string{"source-crs/", "custom-crs/", "extra-manifest/", "ztp-test/"}
+	ignorePaths       [5]string = [5]string{
+		"source-crs/",
+		"custom-crs/",
+		"extra-manifest/",
+		"extra-manifests/",
+		"ztp-test/",
+	}
 )
 
 var _ = Describe("Cluster Deployment Types Tests", Ordered, Label(tsparams.LabelDeploymentTypeTestCases), func() {
@@ -55,8 +61,6 @@ var _ = Describe("Cluster Deployment Types Tests", Ordered, Label(tsparams.Label
 
 		policiesApp *argocd.ApplicationBuilder
 		clustersApp *argocd.ApplicationBuilder
-
-		spoke1ClusterName string
 	)
 
 	BeforeAll(func() {
@@ -116,7 +120,7 @@ var _ = Describe("Cluster Deployment Types Tests", Ordered, Label(tsparams.Label
 		_, policyTemplate = getFilesInfo(policiesRepo, pathPolicies)
 
 		// Check for siteconfig deployment type
-		deploymentMethod = getDeploymentMethod(HubAPIClient, spoke1ClusterName, deploymentMethod)
+		deploymentMethod = getDeploymentMethod(HubAPIClient, RANConfig.Spoke1Name, deploymentMethod)
 	})
 
 	AfterAll(func() {
