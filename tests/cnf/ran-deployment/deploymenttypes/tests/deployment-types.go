@@ -290,7 +290,6 @@ func getFilesInfo(repo *git.Repository, path string) (tsparams.DeploymentType, t
 	Expect(err).ToNot(HaveOccurred(), "Failed to get file subtree for path %s", path)
 
 	err = subtree.Files().ForEach(func(fileEntry *object.File) error {
-
 		for _, ignorePath := range ignorePaths {
 			if strings.Contains(fileEntry.Name, ignorePath) {
 				glog.V(tsparams.LogLevel).Infof("Skipping reference or test CR file: %s", fileEntry.Name)
