@@ -288,14 +288,8 @@ func getFilesInfo(repo *git.Repository, path string) (tsparams.DeploymentType, t
 
 	subtree, err := tree.Tree(path)
 	Expect(err).ToNot(HaveOccurred(), "Failed to get file subtree for path %s", path)
-	// subtree, err = tree.Path()
 
 	err = subtree.Files().ForEach(func(fileEntry *object.File) error {
-		// if !strings.HasPrefix(fileEntry.Name, path) {
-		// 	glog.V(tsparams.LogLevel).Infof("Skipping file: %s (outside of path: %s)", fileEntry.Name, path)
-
-		// 	return nil
-		// }
 
 		for _, ignorePath := range ignorePaths {
 			if strings.Contains(fileEntry.Name, ignorePath) {
@@ -469,18 +463,3 @@ func getDeploymentMethod(
 
 	return deployment
 }
-
-// getClusterName returns the name of the cluster.
-// func getClusterName(cluster *clients.Settings) string {
-// 	var (
-// 		clusterName string
-// 	)
-
-// 	klusterlet, err := ocm.PullKlusterlet(cluster, ocm.KlusterletName)
-// 	Expect(err).ToNot(HaveOccurred(), "Failed to get klusterlet")
-
-// 	clusterName = klusterlet.Object.Spec.ClusterName
-// 	Expect(clusterName).ToNot(BeEmpty(), "Failed to get clustername")
-
-// 	return clusterName
-// }
