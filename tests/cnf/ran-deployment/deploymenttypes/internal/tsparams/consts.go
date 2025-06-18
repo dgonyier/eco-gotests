@@ -54,10 +54,6 @@ const (
 	LabelSuite string = "deploymenttypes"
 	// LabelDeploymentTypeTestCases is the label for deployment type checking.
 	LabelDeploymentTypeTestCases string = "deployment-types"
-	// ImageRegistryName is the name of the image registry config.
-	ImageRegistryName string = "cluster"
-	// ImageRegistryNamespace is the namespace for the image registry and where its PVC is.
-	ImageRegistryNamespace string = "openshift-image-registry"
 	// ArgoCdPoliciesAppName is the name of the policies app in Argo CD.
 	ArgoCdPoliciesAppName string = "policies"
 	// ArgoCdClustersAppName is the name of the clusters app in Argo CD.

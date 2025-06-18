@@ -3,6 +3,7 @@ package tests
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -68,26 +69,19 @@ var _ = Describe("Cluster Deployment Types Tests", Ordered, Label(tsparams.Label
 
 		err := ocm.WaitForAllPoliciesComplianceState(
 			HubAPIClient, policiesv1.Compliant, time.Minute, runtimeclient.ListOptions{Namespace: RANConfig.Spoke1Name})
-		if err != nil {
-			glog.V(tsparams.LogLevel).Infof(
-				"Failed to verify all policies are compliant for spoke %s: %v", RANConfig.Spoke1Name, err)
-			Expect(err).ToNot(HaveOccurred(), "Failed to verify all policies are compliant for spoke %s", RANConfig.Spoke1Name)
-		}
 
-		spoke1ClusterName = getClusterName(Spoke1APIClient)
-		clusterKind = getClusterType(Spoke1APIClient, spoke1ClusterName)
+		Expect(err).ToNot(HaveOccurred(), "Failed to verify all policies are compliant for spoke %s", RANConfig.Spoke1Name)
+
+		clusterKind = getClusterType(Spoke1APIClient, RANConfig.Spoke1Name)
 
 		if Spoke2APIClient != nil && Spoke2APIClient.KubeconfigPath != "" {
 			err = ocm.WaitForAllPoliciesComplianceState(
 				HubAPIClient, policiesv1.Compliant, time.Minute, runtimeclient.ListOptions{Namespace: RANConfig.Spoke2Name})
-			if err != nil {
-				glog.V(tsparams.LogLevel).Infof(
-					"Failed to verify all policies are compliant for spoke %s: %v", RANConfig.Spoke2Name, err)
-				Expect(err).ToNot(HaveOccurred(), "Failed to verify all policies are compliant for spoke %s", RANConfig.Spoke2Name)
-			} else {
-				isMultiCluster = tsparams.MultiCluster
-				// getClusterType(Spoke2APIClient)
-			}
+
+			Expect(err).ToNot(HaveOccurred(), "Failed to verify all policies are compliant for spoke %s", RANConfig.Spoke2Name)
+
+			isMultiCluster = tsparams.MultiCluster
+
 		} else {
 			glog.V(tsparams.LogLevel).Infof("Second cluster is not available")
 			isMultiCluster = tsparams.SingleCluster
@@ -131,20 +125,19 @@ var _ = Describe("Cluster Deployment Types Tests", Ordered, Label(tsparams.Label
 		rmGitCloneDirs()
 	})
 
-	It(fmt.Sprintf("When deployment is %s", tsparams.MultiCluster), reportxml.ID("80498"), func() {
-		multiple := isMultiCluster
+	It(fmt.Sprintf("checks if deployment is %s", tsparams.MultiCluster), reportxml.ID("80498"), func() {
 
-		Expect(multiple == tsparams.SingleCluster || multiple == tsparams.MultiCluster).To(BeTrueBecause(
+		Expect(isMultiCluster == tsparams.SingleCluster || isMultiCluster == tsparams.MultiCluster).To(BeTrueBecause(
 			"Deployment must either be single cluster or multi cluster"))
 
-		if multiple == tsparams.SingleCluster {
+		if isMultiCluster == tsparams.SingleCluster {
 			Skip(fmt.Sprintf("Not %s deployment", tsparams.MultiCluster))
 		}
 
 		glog.V(tsparams.LogLevel).Info("Deployment is multi cluster")
 	})
 
-	DescribeTable("Checking install method",
+	DescribeTable("checks deployment method",
 		func(methodValue *tsparams.DeploymentType, kindValue tsparams.DeploymentType) {
 
 			Expect(*methodValue).ToNot(BeEmpty(), "deployMethod should not be empty")
@@ -156,14 +149,14 @@ var _ = Describe("Cluster Deployment Types Tests", Ordered, Label(tsparams.Label
 			glog.V(tsparams.LogLevel).Infof("Install method is %s", kindValue)
 		},
 		func(methodValue *tsparams.DeploymentType, kindValue tsparams.DeploymentType) string {
-			return fmt.Sprintf("When deployment method is %s", kindValue)
+			return fmt.Sprintf("checks if deployment method is %s", kindValue)
 		},
 		Entry(nil, &deploymentMethod, tsparams.DeploymentImageBasedCI, reportxml.ID("80495")),
 		Entry(nil, &deploymentMethod, tsparams.DeploymentAssistedCI, reportxml.ID("80494")),
 		Entry(nil, &deploymentMethod, tsparams.DeploymentSiteConfig, reportxml.ID("80493")),
 	)
 
-	DescribeTable("Checking policy kind",
+	DescribeTable("checks policy kind",
 		func(policyValue *tsparams.PolicyType, kindValue tsparams.PolicyType) {
 
 			Expect(*policyValue).ToNot(BeEmpty(), "policyTemplate should not be empty")
@@ -175,7 +168,7 @@ var _ = Describe("Cluster Deployment Types Tests", Ordered, Label(tsparams.Label
 			glog.V(tsparams.LogLevel).Infof("Policy type is %s", kindValue)
 		},
 		func(policyValue *tsparams.PolicyType, kindValue tsparams.PolicyType) string {
-			return fmt.Sprintf("When policy type is %s", kindValue)
+			return fmt.Sprintf("checks if policy type is %s", kindValue)
 		},
 		Entry(nil, &policyTemplate, tsparams.PolicyPGT, reportxml.ID("80496")),
 		Entry(nil, &policyTemplate, tsparams.PolicyACMPG, reportxml.ID("80502")),
@@ -183,7 +176,7 @@ var _ = Describe("Cluster Deployment Types Tests", Ordered, Label(tsparams.Label
 		Entry(nil, &policyTemplate, tsparams.PolicyACMPGHST, reportxml.ID("80503")),
 	)
 
-	DescribeTable("Checking cluster type",
+	DescribeTable("checks cluster type",
 		func(clusterValue *tsparams.ClusterType, kindValue tsparams.ClusterType) {
 
 			Expect(*clusterValue).ToNot(BeEmpty(), "clusterKind should not be empty")
@@ -195,7 +188,7 @@ var _ = Describe("Cluster Deployment Types Tests", Ordered, Label(tsparams.Label
 			glog.V(tsparams.LogLevel).Infof("Cluster type is %s", kindValue)
 		},
 		func(clusterValue *tsparams.ClusterType, kindValue tsparams.ClusterType) string {
-			return fmt.Sprintf("When cluster type is %s", kindValue)
+			return fmt.Sprintf("checks if cluster type is %s", kindValue)
 		},
 		Entry(nil, &clusterKind, tsparams.ClusterSNO, reportxml.ID("80497")),
 		Entry(nil, &clusterKind, tsparams.ClusterSNOPlusWorker, reportxml.ID("81679")),
@@ -289,7 +282,11 @@ func getFilesInfo(repo *git.Repository, path string) (tsparams.DeploymentType, t
 	tree, err := commit.Tree()
 	Expect(err).ToNot(HaveOccurred(), "Failed to get file tree")
 
-	err = tree.Files().ForEach(func(fileEntry *object.File) error {
+	subtree, err := tree.Tree(path)
+	Expect(err).ToNot(HaveOccurred(), "Failed to get file subtree for path %s", path)
+	// subtree, err = tree.Path()
+
+	err = subtree.Files().ForEach(func(fileEntry *object.File) error {
 		if !strings.HasPrefix(fileEntry.Name, path) {
 			glog.V(tsparams.LogLevel).Infof("Skipping file: %s (outside of path: %s)", fileEntry.Name, path)
 
@@ -304,13 +301,13 @@ func getFilesInfo(repo *git.Repository, path string) (tsparams.DeploymentType, t
 			}
 		}
 
-		if strings.HasSuffix(fileEntry.Name, ".yaml") || strings.HasSuffix(fileEntry.Name, ".yml") {
+		if filepath.Ext(fileEntry.Name) == ".yaml" || filepath.Ext(fileEntry.Name) == ".yml" {
 			glog.V(tsparams.LogLevel).Infof("Path: %s", fileEntry.Name)
 
 			content, err := fileEntry.Contents()
-			contentBytes := []byte(content)
-
 			Expect(err).ToNot(HaveOccurred(), "Failed to get file content")
+
+			contentBytes := []byte(content)
 
 			// Get YAML Kind value.
 			kind := getYAMLKind(contentBytes, fileEntry.Name)
@@ -470,16 +467,16 @@ func getDeploymentMethod(
 }
 
 // getClusterName returns the name of the cluster.
-func getClusterName(cluster *clients.Settings) string {
-	var (
-		clusterName string
-	)
+// func getClusterName(cluster *clients.Settings) string {
+// 	var (
+// 		clusterName string
+// 	)
 
-	klusterlet, err := ocm.PullKlusterlet(cluster, ocm.KlusterletName)
-	Expect(err).ToNot(HaveOccurred(), "Failed to get klusterlet")
+// 	klusterlet, err := ocm.PullKlusterlet(cluster, ocm.KlusterletName)
+// 	Expect(err).ToNot(HaveOccurred(), "Failed to get klusterlet")
 
-	clusterName = klusterlet.Object.Spec.ClusterName
-	Expect(clusterName).ToNot(BeEmpty(), "Failed to get clustername")
+// 	clusterName = klusterlet.Object.Spec.ClusterName
+// 	Expect(clusterName).ToNot(BeEmpty(), "Failed to get clustername")
 
-	return clusterName
-}
+// 	return clusterName
+// }

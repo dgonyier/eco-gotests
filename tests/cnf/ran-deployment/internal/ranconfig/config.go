@@ -36,8 +36,8 @@ type Spoke1Config struct {
 // Spoke2Config contains the configuration for the spoke 2 cluster, if present.
 type Spoke2Config struct {
 	Spoke2APIClient  *clients.Settings
-	Spoke2Name       string
 	Spoke2OCPVersion string
+	Spoke2Name       string
 	Spoke2Kubeconfig string `envconfig:"ECO_CNF_RAN_KUBECONFIG_SPOKE2"`
 }
 
@@ -80,6 +80,8 @@ func (ranconfig *RANConfig) newHubConfig() {
 	ranconfig.HubConfig.HubOCPVersion, err = version.GetOCPVersion(ranconfig.HubConfig.HubAPIClient)
 	if err != nil {
 		glog.V(ranparam.LogLevel).Infof("Failed to get OCP version from hub: %v", err)
+
+		return
 	}
 
 	glog.V(ranparam.LogLevel).Infof("Found OCP version on hub: %s", ranconfig.HubConfig.HubOCPVersion)
@@ -88,89 +90,177 @@ func (ranconfig *RANConfig) newHubConfig() {
 func (ranconfig *RANConfig) newSpoke1Config() {
 	var err error
 
-	if spoke1Kubeconfig := ranconfig.Spoke1Config.Spoke1Kubeconfig; spoke1Kubeconfig != "" {
-		ranconfig.Spoke1Config.Spoke1APIClient = clients.New(ranconfig.Spoke1Config.Spoke1Kubeconfig)
-
-		if ranconfig.Spoke1APIClient != nil && ranconfig.Spoke1APIClient.KubeconfigPath != "" {
-			klusterlet, err := ocm.PullKlusterlet(ranconfig.Spoke1Config.Spoke1APIClient, ocm.KlusterletName)
-			if err != nil {
-				glog.V(ranparam.LogLevel).Infof(
-					"Failed to get spoke 1 klusterlet at %s: %v", spoke1Kubeconfig, err)
-
-				return
-			}
-
-			spoke1Name := klusterlet.Object.Spec.ClusterName
-			if spoke1Name == "" {
-				glog.V(ranparam.LogLevel).Infof(
-					"Failed to get spoke 1 name from klusterlet at %s: %v", spoke1Kubeconfig, err)
-
-				return
-			}
-
-			ranconfig.Spoke1Config.Spoke1Name = spoke1Name
-		} else {
-			glog.V(ranparam.LogLevel).Infof("No spoke 1 API Client or KUBECONFIG defined")
-
-			return
-		}
-	} else {
+	if ranconfig.Spoke1Config.Spoke1Kubeconfig == "" {
 		glog.V(ranparam.LogLevel).Infof("No spoke 1 kubeconfig specified in KUBECONFIG environment variable")
 
 		return
 	}
 
+	ranconfig.Spoke1Config.Spoke1APIClient = clients.New(ranconfig.Spoke1Config.Spoke1Kubeconfig)
+
+	if ranconfig.Spoke1APIClient == nil || ranconfig.Spoke1APIClient.KubeconfigPath == "" {
+		glog.V(ranparam.LogLevel).Infof("No spoke 1 API Client or KUBECONFIG defined")
+
+		return
+	}
+
+	klusterlet, err := ocm.PullKlusterlet(ranconfig.Spoke1Config.Spoke1APIClient, ocm.KlusterletName)
+	if err != nil {
+		glog.V(ranparam.LogLevel).Infof(
+			"Failed to get spoke 1 klusterlet at %s: %v", ranconfig.Spoke1Config.Spoke1Kubeconfig, err)
+
+		return
+	}
+
+	ranconfig.Spoke1Config.Spoke1Name = klusterlet.Object.Spec.ClusterName
+	if ranconfig.Spoke1Config.Spoke1Name == "" {
+		glog.V(ranparam.LogLevel).Infof(
+			"Failed to get spoke 1 name from klusterlet at %s: %v", ranconfig.Spoke1Config.Spoke1Kubeconfig, err)
+
+		return
+	}
+
+	glog.V(ranparam.LogLevel).Infof("Found cluster name on spoke 1: %s", ranconfig.Spoke1Config.Spoke1Name)
+
 	ranconfig.Spoke1Config.Spoke1OCPVersion, err = version.GetOCPVersion(ranconfig.Spoke1Config.Spoke1APIClient)
 	if err != nil {
 		glog.V(ranparam.LogLevel).Infof("Failed to get OCP version from spoke 1: %v", err)
+
+		return
 	}
 
 	glog.V(ranparam.LogLevel).Infof("Found OCP version on spoke 1: %s", ranconfig.Spoke1Config.Spoke1OCPVersion)
+
+	/*
+		if spoke1Kubeconfig := ranconfig.Spoke1Config.Spoke1Kubeconfig; spoke1Kubeconfig != "" {
+			ranconfig.Spoke1Config.Spoke1APIClient = clients.New(ranconfig.Spoke1Config.Spoke1Kubeconfig)
+
+			if ranconfig.Spoke1APIClient != nil && ranconfig.Spoke1APIClient.KubeconfigPath != "" {
+				klusterlet, err := ocm.PullKlusterlet(ranconfig.Spoke1Config.Spoke1APIClient, ocm.KlusterletName)
+				if err != nil {
+					glog.V(ranparam.LogLevel).Infof(
+						"Failed to get spoke 1 klusterlet at %s: %v", spoke1Kubeconfig, err)
+
+					return
+				}
+
+				spoke1Name := klusterlet.Object.Spec.ClusterName
+				if spoke1Name == "" {
+					glog.V(ranparam.LogLevel).Infof(
+						"Failed to get spoke 1 name from klusterlet at %s: %v", spoke1Kubeconfig, err)
+
+					return
+				}
+
+				ranconfig.Spoke1Config.Spoke1Name = spoke1Name
+			} else {
+				glog.V(ranparam.LogLevel).Infof("No spoke 1 API Client or KUBECONFIG defined")
+
+				return
+			}
+		} else {
+			glog.V(ranparam.LogLevel).Infof("No spoke 1 kubeconfig specified in KUBECONFIG environment variable")
+
+			return
+		}
+
+		ranconfig.Spoke1Config.Spoke1OCPVersion, err = version.GetOCPVersion(ranconfig.Spoke1Config.Spoke1APIClient)
+		if err != nil {
+			glog.V(ranparam.LogLevel).Infof("Failed to get OCP version from spoke 1: %v", err)
+		}
+
+		glog.V(ranparam.LogLevel).Infof("Found OCP version on spoke 1: %s", ranconfig.Spoke1Config.Spoke1OCPVersion)
+	*/
 }
 
 func (ranconfig *RANConfig) newSpoke2Config() {
 	var err error
 
-	if spoke2Kubeconfig := ranconfig.Spoke2Config.Spoke2Kubeconfig; spoke2Kubeconfig != "" {
-		ranconfig.Spoke2Config.Spoke2APIClient = clients.New(ranconfig.Spoke2Config.Spoke2Kubeconfig)
-
-		if ranconfig.Spoke2APIClient != nil && ranconfig.Spoke2APIClient.KubeconfigPath != "" {
-			klusterlet, err := ocm.PullKlusterlet(ranconfig.Spoke2Config.Spoke2APIClient, ocm.KlusterletName)
-			if err != nil {
-				glog.V(ranparam.LogLevel).Infof(
-					"Failed to get spoke 2 klusterlet at %s: %v", spoke2Kubeconfig, err)
-
-				return
-			}
-
-			spoke2Name := klusterlet.Object.Spec.ClusterName
-			if spoke2Name == "" {
-				glog.V(ranparam.LogLevel).Infof(
-					"Failed to get spoke 2 name from klusterlet at %s: %v", spoke2Kubeconfig, err)
-
-				return
-			}
-
-			ranconfig.Spoke2Config.Spoke2Name = spoke2Name
-		} else {
-			glog.V(ranparam.LogLevel).Infof(
-				"No spoke 2 API Client, ECO_CNF_RAN_KUBECONFIG_SPOKE2 not defined, or spoke 2 KUBECONFIG file missing")
-
-			return
-		}
-	} else {
+	if ranconfig.Spoke2Config.Spoke2Kubeconfig == "" {
 		glog.V(ranparam.LogLevel).Infof(
 			"No spoke 2 kubeconfig specified in ECO_CNF_RAN_KUBECONFIG_SPOKE2 environment variable")
 
 		return
 	}
 
-	ranconfig.Spoke2Config.Spoke2OCPVersion, err = version.GetOCPVersion(ranconfig.Spoke2Config.Spoke2APIClient)
+	ranconfig.Spoke2Config.Spoke2APIClient = clients.New(ranconfig.Spoke2Config.Spoke2Kubeconfig)
+
+	if ranconfig.Spoke1APIClient == nil || ranconfig.Spoke1APIClient.KubeconfigPath == "" {
+		glog.V(ranparam.LogLevel).Infof(
+			"No spoke 2 API Client, ECO_CNF_RAN_KUBECONFIG_SPOKE2 not defined, or spoke 2 KUBECONFIG file missing")
+
+		return
+	}
+
+	klusterlet, err := ocm.PullKlusterlet(ranconfig.Spoke2Config.Spoke2APIClient, ocm.KlusterletName)
+	if err != nil {
+		glog.V(ranparam.LogLevel).Infof(
+			"Failed to get spoke 2 klusterlet at %s: %v", ranconfig.Spoke2Config.Spoke2Kubeconfig, err)
+
+		return
+	}
+
+	ranconfig.Spoke1Config.Spoke1Name = klusterlet.Object.Spec.ClusterName
+	if ranconfig.Spoke1Config.Spoke1Name == "" {
+		glog.V(ranparam.LogLevel).Infof(
+			"Failed to get spoke 2 name from klusterlet at %s: %v", ranconfig.Spoke2Config.Spoke2Kubeconfig, err)
+
+		return
+	}
+
+	glog.V(ranparam.LogLevel).Infof("Found cluster name on spoke 2: %s", ranconfig.Spoke2Config.Spoke2Name)
+
+	ranconfig.Spoke1Config.Spoke1OCPVersion, err = version.GetOCPVersion(ranconfig.Spoke2Config.Spoke2APIClient)
 	if err != nil {
 		glog.V(ranparam.LogLevel).Infof("Failed to get OCP version from spoke 2: %v", err)
+
+		return
 	}
 
 	glog.V(ranparam.LogLevel).Infof("Found OCP version on spoke 2: %s", ranconfig.Spoke2Config.Spoke2OCPVersion)
+
+	/*
+		if spoke2Kubeconfig := ranconfig.Spoke2Config.Spoke2Kubeconfig; spoke2Kubeconfig != "" {
+			ranconfig.Spoke2Config.Spoke2APIClient = clients.New(ranconfig.Spoke2Config.Spoke2Kubeconfig)
+
+			if ranconfig.Spoke2APIClient != nil && ranconfig.Spoke2APIClient.KubeconfigPath != "" {
+				klusterlet, err := ocm.PullKlusterlet(ranconfig.Spoke2Config.Spoke2APIClient, ocm.KlusterletName)
+				if err != nil {
+					glog.V(ranparam.LogLevel).Infof(
+						"Failed to get spoke 2 klusterlet at %s: %v", spoke2Kubeconfig, err)
+
+					return
+				}
+
+				spoke2Name := klusterlet.Object.Spec.ClusterName
+				if spoke2Name == "" {
+					glog.V(ranparam.LogLevel).Infof(
+						"Failed to get spoke 2 name from klusterlet at %s: %v", spoke2Kubeconfig, err)
+
+					return
+				}
+
+				ranconfig.Spoke2Config.Spoke2Name = spoke2Name
+			} else {
+				glog.V(ranparam.LogLevel).Infof(
+					"No spoke 2 API Client, ECO_CNF_RAN_KUBECONFIG_SPOKE2 not defined, or spoke 2 KUBECONFIG file missing")
+
+				return
+			}
+		} else {
+			glog.V(ranparam.LogLevel).Infof(
+				"No spoke 2 kubeconfig specified in ECO_CNF_RAN_KUBECONFIG_SPOKE2 environment variable")
+
+			return
+		}
+
+		ranconfig.Spoke2Config.Spoke2OCPVersion, err = version.GetOCPVersion(ranconfig.Spoke2Config.Spoke2APIClient)
+		if err != nil {
+			glog.V(ranparam.LogLevel).Infof("Failed to get OCP version from spoke 2: %v", err)
+		}
+
+		glog.V(ranparam.LogLevel).Infof("Found OCP version on spoke 2: %s", ranconfig.Spoke2Config.Spoke2OCPVersion)
+	*/
 }
 
 func readEnv[C any](config *C) error {

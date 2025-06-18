@@ -13,10 +13,6 @@ import (
 // GetOCPVersion uses the cluster version on a given cluster to find the latest OCP version, returning the desired
 // version if the latest version could not be found.
 func GetOCPVersion(client *clients.Settings) (string, error) {
-	// clusterVersion, err := cluster.GetOCPClusterVersion(client)
-	// if err != nil {
-	// 	return "", err
-	// }
 	clusterVersion, err := clusterversion.Pull(client)
 
 	if err != nil {

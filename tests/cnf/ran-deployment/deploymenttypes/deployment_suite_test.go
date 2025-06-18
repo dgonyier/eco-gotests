@@ -25,18 +25,6 @@ func TestDeployment(t *testing.T) {
 	RunSpecs(t, "RAN Deployment Types Suite", Label(tsparams.Labels...), reporterConfig)
 }
 
-var _ = BeforeSuite(func() {
-
-})
-
-var _ = BeforeEach(func() {
-
-})
-
-var _ = AfterSuite(func() {
-
-})
-
 var _ = JustAfterEach(func() {
 	var (
 		currentDir, currentFilename = path.Split(currentFile)
@@ -49,7 +37,7 @@ var _ = JustAfterEach(func() {
 		reporter.ReportIfFailed(
 			report,
 			currentFile,
-			tsparams.ReporterSpokeNamespacesToDump,
+			map[string]string{},
 			tsparams.ReporterSpokeCRsToDump)
 	}
 
@@ -58,7 +46,7 @@ var _ = JustAfterEach(func() {
 			HubAPIClient.KubeconfigPath,
 			report,
 			hubReportPath,
-			tsparams.ReporterHubNamespacesToDump,
+			map[string]string{},
 			tsparams.ReporterHubCRsToDump)
 	}
 
@@ -67,7 +55,7 @@ var _ = JustAfterEach(func() {
 			Spoke2APIClient.KubeconfigPath,
 			report,
 			spoke2ReportPath,
-			tsparams.ReporterSpokeNamespacesToDump,
+			map[string]string{},
 			tsparams.ReporterSpokeCRsToDump)
 	}
 })
