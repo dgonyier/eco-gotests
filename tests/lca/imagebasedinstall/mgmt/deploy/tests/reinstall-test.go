@@ -59,7 +59,7 @@ var _ = Describe(
 					Skip("Cluster is deployed with siteconfig operator")
 				}
 
-				tsparams.ReporterNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
+				tsparams.ReporterSpokeNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
 
 				By("Load original spoke api client")
 
@@ -217,7 +217,7 @@ var _ = Describe(
 					Skip("Cluster installed with proxy")
 				}
 
-				tsparams.ReporterNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
+				tsparams.ReporterSpokeNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
 
 				reinstallWithClusterInstance(ipv4AddrFamily)
 			})
@@ -245,7 +245,7 @@ var _ = Describe(
 					Skip("Cluster is not deployed with dual-stack primary IPv4")
 				}
 
-				tsparams.ReporterNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
+				tsparams.ReporterSpokeNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
 
 				reinstallWithClusterInstance(dualstackPrimaryv4AddrFamily)
 			})
@@ -273,7 +273,7 @@ var _ = Describe(
 					Skip("Cluster is not deployed with dual-stack primary IPv6")
 				}
 
-				tsparams.ReporterNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
+				tsparams.ReporterSpokeNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
 
 				reinstallWithClusterInstance(dualstackPrimaryv4AddrFamily)
 			})

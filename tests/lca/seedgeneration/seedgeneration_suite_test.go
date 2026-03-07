@@ -1,6 +1,8 @@
 package seedgeneration_test
 
 import (
+	"fmt"
+	"path"
 	"runtime"
 	"testing"
 
@@ -48,10 +50,30 @@ var _ = ReportAfterSuite("", func(report Report) {
 })
 
 var _ = JustAfterEach(func() {
+	if SeedGenerationConfig == nil {
+		return
+	}
+
+	var (
+		currentDir, currentFilename = path.Split(currentFile)
+		hubReportPath               = fmt.Sprintf("%shub_%s", currentDir, currentFilename)
+		spokeReportPath             = fmt.Sprintf("%sspoke_%s", currentDir, currentFilename)
+		report                      = CurrentSpecReport()
+	)
+
+	if SeedGenerationConfig.SeedHubKubeConfig != "" {
+		reporter.ReportIfFailedOnCluster(
+			SeedGenerationConfig.SeedHubKubeConfig,
+			report,
+			hubReportPath,
+			tsparams.ReporterHubNamespacesToDump,
+			tsparams.ReporterHubCRsToDump)
+	}
+
 	reporter.ReportIfFailedOnCluster(
 		SeedGenerationConfig.TargetSNOKubeConfig,
-		CurrentSpecReport(),
-		currentFile,
-		tsparams.ReporterNamespacesToDump,
-		tsparams.ReporterCRDsToDump)
+		report,
+		spokeReportPath,
+		tsparams.ReporterSpokeNamespacesToDump,
+		tsparams.ReporterSpokeCRsToDump)
 })

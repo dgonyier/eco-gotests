@@ -44,6 +44,6 @@ var _ = JustAfterEach(func() {
 	reporter.ReportIfFailed(
 		CurrentSpecReport(),
 		currentFile,
-		tsparams.ReporterNamespacesToDump,
-		tsparams.ReporterCRDsToDump)
+		tsparams.ReporterSpokeNamespacesToDump,
+		tsparams.ReporterSpokeCRsToDump)
 })
