@@ -11,6 +11,7 @@ import (
 type SeedGenerationConfig struct {
 	*config.GeneralConfig
 	TargetSNOKubeConfig string `envconfig:"ECO_LCA_IBU_CNF_KUBECONFIG_TARGET_SNO"`
+	SeedHubKubeConfig   string `envconfig:"ECO_LCA_IBU_CNF_KUBECONFIG_SEED_HUB"`
 	IbguSeedImage       string `yaml:"ibgu_seed_image" envconfig:"ECO_LCA_IBGU_SEED_IMAGE"`
 }
 

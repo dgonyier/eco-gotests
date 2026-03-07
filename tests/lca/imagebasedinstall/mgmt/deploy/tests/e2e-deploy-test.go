@@ -53,7 +53,7 @@ var _ = Describe(
 					Skip("Cluster is deployed with siteconfig operator")
 				}
 
-				tsparams.ReporterNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
+				tsparams.ReporterSpokeNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
 
 				createIBIOResouces(ipv4AddrFamily)
 			})
@@ -80,7 +80,7 @@ var _ = Describe(
 					Skip("Cluster is not deployed with dual-stack primary IPv4")
 				}
 
-				tsparams.ReporterNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
+				tsparams.ReporterSpokeNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
 
 				createSiteConfigResouces(dualstackPrimaryv4AddrFamily)
 			})
@@ -107,7 +107,7 @@ var _ = Describe(
 					Skip("Cluster is not deployed with dual-stack primary IPv6")
 				}
 
-				tsparams.ReporterNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
+				tsparams.ReporterSpokeNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
 
 				createSiteConfigResouces(dualstackPrimaryv6AddrFamily)
 			})
@@ -135,7 +135,7 @@ var _ = Describe(
 					Skip("Cluster is not deployed with dual-stack primary IPv4")
 				}
 
-				tsparams.ReporterNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
+				tsparams.ReporterSpokeNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
 
 				createSiteConfigResouces(dualstackPrimaryv4AddrFamily)
 			})
@@ -163,7 +163,7 @@ var _ = Describe(
 					Skip("Cluster is not deployed with dual-stack primary IPv6")
 				}
 
-				tsparams.ReporterNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
+				tsparams.ReporterSpokeNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
 
 				createSiteConfigResouces(dualstackPrimaryv6AddrFamily)
 			})
@@ -191,7 +191,7 @@ var _ = Describe(
 					Skip("Cluster is not deployed with primary IPv6")
 				}
 
-				tsparams.ReporterNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
+				tsparams.ReporterSpokeNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
 
 				createSiteConfigResouces(dualstackPrimaryv6AddrFamily)
 			})
@@ -219,7 +219,7 @@ var _ = Describe(
 					Skip("Cluster is not deployed with primary IPv4")
 				}
 
-				tsparams.ReporterNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
+				tsparams.ReporterSpokeNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
 
 				createSiteConfigResouces(dualstackPrimaryv4AddrFamily)
 			})
@@ -242,7 +242,7 @@ var _ = Describe(
 					Skip("Cluster installed with proxy")
 				}
 
-				tsparams.ReporterNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
+				tsparams.ReporterSpokeNamespacesToDump[MGMTConfig.Cluster.Info.ClusterName] = reporterNamespaceToDump
 
 				createSiteConfigResouces(ipv4AddrFamily)
 			})

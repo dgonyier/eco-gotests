@@ -16,13 +16,13 @@ var (
 	// Labels represents the range of labels that can be used for test cases selection.
 	Labels = append(mgmtparams.Labels, LabelSuite)
 
-	// ReporterNamespacesToDump tells to the reporter from where to collect logs.
-	ReporterNamespacesToDump = map[string]string{
+	// ReporterSpokeNamespacesToDump tells to the reporter from where to collect logs on the spoke.
+	ReporterSpokeNamespacesToDump = map[string]string{
 		LCANamespace: "lca",
 	}
 
-	// ReporterCRDsToDump tells to the reporter what CRs to dump.
-	ReporterCRDsToDump = []k8sreporter.CRData{
+	// ReporterSpokeCRsToDump tells to the reporter what CRs to dump on the spoke.
+	ReporterSpokeCRsToDump = []k8sreporter.CRData{
 		{Cr: &corev1.PodList{}},
 		{Cr: &lcav1.ImageBasedUpgradeList{}},
 	}
