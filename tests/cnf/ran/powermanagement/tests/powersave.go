@@ -180,6 +180,8 @@ var _ = Describe("Per-core runtime power states tuning", Label(tsparams.LabelPow
 			cpusetOutput, err := testpod.ExecCommand([]string{"sh", `-c`, "taskset -c -p $$ | cut -d: -f2"})
 			Expect(err).ToNot(HaveOccurred(), "Failed to get cpuset")
 
+			klog.V(tsparams.LogLevel).Infof("taskset output: %s", cpusetOutput.String())
+
 			By("Verify powersetting of cpus used by the pod")
 
 			trimmedOutput := strings.TrimSpace(cpusetOutput.String())
