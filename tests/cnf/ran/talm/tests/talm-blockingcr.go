@@ -10,7 +10,6 @@ import (
 	"github.com/rh-ecosystem-edge/eco-goinfra/pkg/cgu"
 	"github.com/rh-ecosystem-edge/eco-goinfra/pkg/namespace"
 	"github.com/rh-ecosystem-edge/eco-goinfra/pkg/reportxml"
-	"github.com/rh-ecosystem-edge/eco-gotests/tests/cnf/ran/internal/ranhelper"
 	. "github.com/rh-ecosystem-edge/eco-gotests/tests/cnf/ran/internal/raninittools"
 	"github.com/rh-ecosystem-edge/eco-gotests/tests/cnf/ran/internal/ranparam"
 	"github.com/rh-ecosystem-edge/eco-gotests/tests/cnf/ran/internal/version"
@@ -18,7 +17,6 @@ import (
 	"github.com/rh-ecosystem-edge/eco-gotests/tests/cnf/ran/talm/internal/setup"
 	"github.com/rh-ecosystem-edge/eco-gotests/tests/cnf/ran/talm/internal/tsparams"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
 )
 
@@ -44,17 +42,7 @@ var _ = Describe("TALM Blocking CRs Tests", Label(tsparams.LabelBlockingCRTestCa
 	AfterEach(func() {
 		By(fmt.Sprintf("printing CGU events in the %s namespace for debugging", tsparams.TestNamespace))
 
-		getEventsCmd := fmt.Sprintf(
-			"KUBECONFIG=%s /clusterconfigs/oc get event.v1.events.k8s.io -n %s "+
-				"--field-selector='regarding.kind==ClusterGroupUpgrade' --sort-by='{.metadata.creationTimestamp}'",
-			RANConfig.HubKubeconfig, tsparams.TestNamespace)
-
-		talmTestEvents, err := ranhelper.ExecLocalCommand(time.Minute, "/usr/bin/bash", "-c", getEventsCmd)
-		if err != nil {
-			klog.V(tsparams.LogLevel).Infof("Failed to get CGU events in the %s namespace: %v", tsparams.TestNamespace, err)
-		} else {
-			klog.V(tsparams.LogLevel).Infof("CGU events in the %s namespace:\n%s", tsparams.TestNamespace, talmTestEvents)
-		}
+		helper.PrintCGUEvents()
 
 		By("Cleaning up test resources on hub")
 

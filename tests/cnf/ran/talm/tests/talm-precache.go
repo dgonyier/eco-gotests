@@ -62,6 +62,10 @@ var _ = Describe("TALM precache", Label(tsparams.LabelPreCacheTestCases), func()
 			})
 
 			AfterEach(func() {
+				By(fmt.Sprintf("printing CGU events in the %s namespace for debugging", tsparams.TestNamespace))
+
+				helper.PrintCGUEvents()
+
 				for _, suffix := range suffixes {
 					errorList := setup.CleanupTestResourcesOnHub(HubAPIClient, tsparams.TestNamespace, suffix)
 					Expect(errorList).To(BeEmpty(), "Failed to clean up resources on hub for suffix %s", suffix)
@@ -96,6 +100,10 @@ var _ = Describe("TALM precache", Label(tsparams.LabelPreCacheTestCases), func()
 
 		Context("precache OCP with version", func() {
 			AfterEach(func() {
+				By(fmt.Sprintf("printing CGU events in the %s namespace for debugging", tsparams.TestNamespace))
+
+				helper.PrintCGUEvents()
+
 				By("cleaning up resources on hub")
 
 				errorList := setup.CleanupTestResourcesOnHub(HubAPIClient, tsparams.TestNamespace, "")
@@ -165,6 +173,10 @@ var _ = Describe("TALM precache", Label(tsparams.LabelPreCacheTestCases), func()
 			})
 
 			AfterEach(func() {
+				By(fmt.Sprintf("printing CGU events in the %s namespace for debugging", tsparams.TestNamespace))
+
+				helper.PrintCGUEvents()
+
 				err := cgu.NewPreCachingConfigBuilder(
 					HubAPIClient, tsparams.PreCachingConfigName, tsparams.TestNamespace).Delete()
 				Expect(err).ToNot(HaveOccurred(), "Failed to delete PreCachingConfig on hub")
@@ -465,6 +477,10 @@ var _ = Describe("TALM precache", Label(tsparams.LabelPreCacheTestCases), func()
 
 		Context("precaching with one managed cluster powered off and unavailable", func() {
 			AfterEach(func() {
+				By(fmt.Sprintf("printing CGU events in the %s namespace for debugging", tsparams.TestNamespace))
+
+				helper.PrintCGUEvents()
+
 				By("cleaning up resources on hub")
 
 				errorList := setup.CleanupTestResourcesOnHub(HubAPIClient, tsparams.TestNamespace, "")
@@ -509,6 +525,12 @@ var _ = Describe("TALM precache", Label(tsparams.LabelPreCacheTestCases), func()
 
 		Context("batching with one managed cluster powered off and unavailable", Ordered, func() {
 			var cguBuilder *cgu.CguBuilder
+
+			AfterEach(func() {
+				By(fmt.Sprintf("printing CGU events in the %s namespace for debugging", tsparams.TestNamespace))
+
+				helper.PrintCGUEvents()
+			})
 
 			BeforeAll(func() {
 				By("creating and setting up CGU with two spokes, one unavailable")

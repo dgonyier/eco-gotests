@@ -43,6 +43,10 @@ var _ = Describe("TALM Batching Tests", Label(tsparams.LabelBatchingTestCases), 
 	})
 
 	AfterEach(func() {
+		By(fmt.Sprintf("printing CGU events in the %s namespace for debugging", tsparams.TestNamespace))
+
+		helper.PrintCGUEvents()
+
 		By("cleaning up resources on hub")
 
 		errorList := setup.CleanupTestResourcesOnHub(HubAPIClient, tsparams.TestNamespace, "")
