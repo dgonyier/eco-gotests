@@ -25,6 +25,10 @@ var _ = Describe("TALM Canary Tests", Label(tsparams.LabelCanaryTestCases), func
 		By("checking that hub and two spokes are present")
 		Expect(rancluster.AreClustersPresent([]*clients.Settings{HubAPIClient, Spoke1APIClient, Spoke2APIClient})).
 			To(BeTrue(), "Failed due to missing API client")
+
+		By(fmt.Sprintf("clearing CGU events in the %s namespace for debugging", tsparams.TestNamespace))
+
+		helper.ClearCGUEvents()
 	})
 
 	AfterEach(func() {

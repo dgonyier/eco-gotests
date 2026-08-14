@@ -37,6 +37,10 @@ var _ = Describe("TALM Blocking CRs Tests", Label(tsparams.LabelBlockingCRTestCa
 		if !versionInRange {
 			Skip("TALM blocking CR tests require version 4.11 or higher")
 		}
+
+		By(fmt.Sprintf("clearing CGU events in the %s namespace for debugging", tsparams.TestNamespace))
+
+		helper.ClearCGUEvents()
 	})
 
 	AfterEach(func() {

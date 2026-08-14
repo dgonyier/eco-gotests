@@ -38,6 +38,12 @@ import (
 )
 
 var _ = Describe("TALM precache", Label(tsparams.LabelPreCacheTestCases), func() {
+	BeforeEach(func() {
+		By(fmt.Sprintf("clearing CGU events in the %s namespace for debugging", tsparams.TestNamespace))
+
+		helper.ClearCGUEvents()
+	})
+
 	When("there is a single spoke", func() {
 		Context("precache operator", func() {
 			var (

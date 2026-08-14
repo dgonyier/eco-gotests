@@ -13,11 +13,44 @@ import (
 // vs. running inside a pod) have mounted the oc binary at different locations during debugging.
 var fallbackOcPaths = []string{"/clusterconfigs/oc", "/usr/local/bin/oc", "/usr/bin/oc"}
 
+// ClearCGUEvents is a temporary debugging helper that deletes all ClusterGroupUpgrade events in the
+// tsparams.TestNamespace namespace on the hub cluster. It is meant to be called from BeforeEach blocks, paired with
+// PrintCGUEvents in the corresponding AfterEach, so that the printed events only reflect what happened during the
+// current test rather than accumulating across the whole suite run. Per TALM-events-test-plan.md while investigating
+// TALM CGU event behavior, and should be removed once real event assertions are implemented.
+func ClearCGUEvents() {
+	output, err := runOcCommand("delete", "event.v1.events.k8s.io",
+		"-n", tsparams.TestNamespace,
+		"--field-selector", "regarding.kind==ClusterGroupUpgrade",
+		"--ignore-not-found")
+	if err != nil {
+		klog.V(tsparams.LogLevel).Infof(
+			"Failed to clear CGU events in the %s namespace: %v\noutput: %s", tsparams.TestNamespace, err, output)
+	} else {
+		klog.V(tsparams.LogLevel).Infof("Cleared CGU events in the %s namespace", tsparams.TestNamespace)
+	}
+}
+
 // PrintCGUEvents is a temporary debugging helper that prints all ClusterGroupUpgrade events in the
 // tsparams.TestNamespace namespace on the hub cluster. It is meant to be called from AfterEach blocks per
 // TALM-events-test-plan.md while investigating TALM CGU event behavior, and should be removed once real event
 // assertions are implemented.
 func PrintCGUEvents() {
+	output, err := runOcCommand("get", "event.v1.events.k8s.io",
+		"-n", tsparams.TestNamespace,
+		"--field-selector", "regarding.kind==ClusterGroupUpgrade",
+		"--sort-by", "{.metadata.creationTimestamp}")
+	if err != nil {
+		klog.V(tsparams.LogLevel).Infof(
+			"Failed to get CGU events in the %s namespace: %v\noutput: %s", tsparams.TestNamespace, err, output)
+	} else {
+		klog.V(tsparams.LogLevel).Infof("CGU events in the %s namespace:\n%s", tsparams.TestNamespace, output)
+	}
+}
+
+// runOcCommand runs the oc binary against the hub cluster with the given arguments, returning the combined
+// stdout/stderr output for diagnostics.
+func runOcCommand(args ...string) ([]byte, error) {
 	ocPath := resolveOcPath()
 
 	hubKubeconfig := RANConfig.HubKubeconfig
@@ -25,21 +58,11 @@ func PrintCGUEvents() {
 		klog.V(tsparams.LogLevel).Infof("Hub kubeconfig %q not found or inaccessible: %v", hubKubeconfig, statErr)
 	}
 
-	getEventsCmd := exec.Command(ocPath, "get", "event.v1.events.k8s.io",
-		"-n", tsparams.TestNamespace,
-		"--field-selector", "regarding.kind==ClusterGroupUpgrade",
-		"--sort-by", "{.metadata.creationTimestamp}")
+	cmd := exec.Command(ocPath, args...)
 
-	getEventsCmd.Env = append(os.Environ(), "KUBECONFIG="+hubKubeconfig)
+	cmd.Env = append(os.Environ(), "KUBECONFIG="+hubKubeconfig)
 
-	output, err := getEventsCmd.CombinedOutput()
-	if err != nil {
-		klog.V(tsparams.LogLevel).Infof(
-			"Failed to get CGU events in the %s namespace (oc=%s, KUBECONFIG=%s): %v\noutput: %s",
-			tsparams.TestNamespace, ocPath, hubKubeconfig, err, output)
-	} else {
-		klog.V(tsparams.LogLevel).Infof("CGU events in the %s namespace:\n%s", tsparams.TestNamespace, output)
-	}
+	return cmd.CombinedOutput()
 }
 
 // resolveOcPath finds the oc binary via PATH, falling back to a list of known mount locations seen across
