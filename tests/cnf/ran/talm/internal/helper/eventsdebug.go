@@ -13,12 +13,12 @@ import (
 // vs. running inside a pod) have mounted the oc binary at different locations during debugging.
 var fallbackOcPaths = []string{"/clusterconfigs/oc", "/usr/local/bin/oc", "/usr/bin/oc"}
 
-// ClearCGUEvents is a temporary debugging helper that deletes all ClusterGroupUpgrade events in the
-// tsparams.TestNamespace namespace on the hub cluster. It is meant to be called from BeforeEach blocks, paired with
-// PrintCGUEvents in the corresponding AfterEach, so that the printed events only reflect what happened during the
-// current test rather than accumulating across the whole suite run. Per TALM-events-test-plan.md while investigating
-// TALM CGU event behavior, and should be removed once real event assertions are implemented.
-func ClearCGUEvents() {
+// ClearCGUEventsViaOc is a temporary debugging helper that deletes all ClusterGroupUpgrade events in the
+// tsparams.TestNamespace namespace on the hub cluster by shelling out to the oc binary. It is retained as a
+// fallback/reference implementation; the active BeforeEach/AfterEach/checkpoint calls use the eco-goinfra
+// events.ListEventV1s-based implementation in cguevents.go instead, since it matches the API the real event
+// assertions will use and avoids the oc/KUBECONFIG path-resolution issues this shell-based version was prone to.
+func ClearCGUEventsViaOc() {
 	output, err := runOcCommand("delete", "event.v1.events.k8s.io",
 		"-n", tsparams.TestNamespace,
 		"--field-selector", "regarding.kind==ClusterGroupUpgrade",
@@ -31,11 +31,12 @@ func ClearCGUEvents() {
 	}
 }
 
-// PrintCGUEvents is a temporary debugging helper that prints all ClusterGroupUpgrade events in the
-// tsparams.TestNamespace namespace on the hub cluster. It is meant to be called from AfterEach blocks per
-// TALM-events-test-plan.md while investigating TALM CGU event behavior, and should be removed once real event
-// assertions are implemented.
-func PrintCGUEvents() {
+// PrintCGUEventsViaOc is a temporary debugging helper that prints all ClusterGroupUpgrade events in the
+// tsparams.TestNamespace namespace on the hub cluster by shelling out to the oc binary. It is retained as a
+// fallback/reference implementation; the active BeforeEach/AfterEach/checkpoint calls use the eco-goinfra
+// events.ListEventV1s-based implementation in cguevents.go instead, since it matches the API the real event
+// assertions will use and avoids the oc/KUBECONFIG path-resolution issues this shell-based version was prone to.
+func PrintCGUEventsViaOc() {
 	output, err := runOcCommand("get", "event.v1.events.k8s.io",
 		"-n", tsparams.TestNamespace,
 		"--field-selector", "regarding.kind==ClusterGroupUpgrade",

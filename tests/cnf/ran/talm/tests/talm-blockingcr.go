@@ -96,11 +96,25 @@ var _ = Describe("TALM Blocking CRs Tests", Label(tsparams.LabelBlockingCRTestCa
 			By("Waiting for CGU A to succeed")
 
 			_, err = cguA.WaitForCondition(tsparams.CguSuccessfulFinishCondition, 12*time.Minute)
+
+			By("printing CGU A events after waiting for CGU A to succeed")
+
+			helper.PrintCGUEventsCheckpoint("CGU A succeeded", tsparams.CguName+blockingA,
+				"CguSuccess/cluster RemediationInClusterCompleted", "CguSuccess/batch RemediationInBatchCompleted",
+				"CguSuccess/global RemediationCompleted")
+
 			Expect(err).ToNot(HaveOccurred(), "Failed to wait for CGU A to succeed")
 
 			By("Waiting for CGU B to succeed")
 
 			_, err = cguB.WaitForCondition(tsparams.CguSuccessfulFinishCondition, 17*time.Minute)
+
+			By("printing CGU B events after waiting for CGU B to succeed")
+
+			helper.PrintCGUEventsCheckpoint("CGU B succeeded", tsparams.CguName+blockingB,
+				"CguSuccess/cluster RemediationInClusterCompleted", "CguSuccess/batch RemediationInBatchCompleted",
+				"CguSuccess/global RemediationCompleted")
+
 			Expect(err).ToNot(HaveOccurred(), "Failed to wait for CGU B to succeed")
 		})
 	})
@@ -149,6 +163,12 @@ var _ = Describe("TALM Blocking CRs Tests", Label(tsparams.LabelBlockingCRTestCa
 			By("Waiting for CGU A to fail because of timeout")
 
 			_, err = cguA.WaitForCondition(tsparams.CguTimeoutMessageCondition, 7*time.Minute)
+
+			By("printing CGU A events after waiting for CGU A to timeout (CGU B should show no remediation events yet)")
+
+			helper.PrintCGUEventsCheckpoint("CGU A timed out, CGU B still blocked", tsparams.CguName+blockingA,
+				"CguTimedout/batch RemediationInBatchTimeout", "CguTimedout/global RemediationTimeout")
+
 			Expect(err).ToNot(HaveOccurred(), "Failed to wait for CGU A to fail")
 
 			By("Verifiying that CGU B is still blocked")
@@ -188,6 +208,12 @@ var _ = Describe("TALM Blocking CRs Tests", Label(tsparams.LabelBlockingCRTestCa
 
 			blockedMessage := fmt.Sprintf(tsparams.TalmMissingCRMessage, tsparams.CguName+blockingA)
 			err = helper.WaitForCguBlocked(cguB, blockedMessage)
+
+			By("printing CGU B events while still blocked (negative check - expect no remediation events yet)")
+
+			helper.PrintCGUEventsCheckpoint("CGU B blocked on missing blocking CR", tsparams.CguName+blockingB,
+				"none expected: no CguStarted/CguSuccess events for B while blocked")
+
 			Expect(err).ToNot(HaveOccurred(), "Failed to wait for CGU B to be blocked")
 
 			By("Setting up CGU A")
@@ -204,11 +230,23 @@ var _ = Describe("TALM Blocking CRs Tests", Label(tsparams.LabelBlockingCRTestCa
 			By("Waiting for CGU A to succeed")
 
 			_, err = cguA.WaitForCondition(tsparams.CguSucceededCondition, 12*time.Minute)
+
+			By("printing CGU A events after waiting for CGU A to succeed")
+
+			helper.PrintCGUEventsCheckpoint("CGU A succeeded", tsparams.CguName+blockingA,
+				"CguStarted/global, batch, cluster", "CguSuccess/cluster, batch, global")
+
 			Expect(err).ToNot(HaveOccurred(), "Failed to wait for CGU A to succeed")
 
 			By("Waiting for CGU B to succeed")
 
 			_, err = cguB.WaitForCondition(tsparams.CguSucceededCondition, 17*time.Minute)
+
+			By("printing CGU B events after unblocking and waiting for CGU B to succeed")
+
+			helper.PrintCGUEventsCheckpoint("CGU B unblocked and succeeded", tsparams.CguName+blockingB,
+				"CguStarted/global, batch, cluster", "CguSuccess/cluster, batch, global")
+
 			Expect(err).ToNot(HaveOccurred(), "Failed to wait for CGU B to succeed")
 		})
 	})
