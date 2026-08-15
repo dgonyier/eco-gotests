@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -23,6 +24,53 @@ const cguEventScopeAnnotation = "cgu.openshift.io/event-type"
 
 // cguRegardingKind is the regarding.kind value TALM sets on every ClusterGroupUpgrade event.
 const cguRegardingKind = "ClusterGroupUpgrade"
+
+// Annotation keys TALM sets on specific ClusterGroupUpgrade event reasons, beyond the scope annotation. See the
+// "Key fields on each event object" table in TALM-events-test-plan.md. Each is only expected on the reason(s)
+// noted below; formatCGUEvents surfaces whichever of them are actually present on a given event so debug output
+// can confirm presence/values ahead of writing real annotation assertions.
+const (
+	// cguMissingClustersAnnotation is set on CguValidationFailure events reporting missing spoke clusters.
+	cguMissingClustersAnnotation = "cgu.openshift.io/missing-clusters"
+	// cguMissingClustersCountAnnotation accompanies cguMissingClustersAnnotation with a count of missing clusters.
+	cguMissingClustersCountAnnotation = "cgu.openshift.io/missing-clusters-count"
+	// cguMissingPoliciesAnnotation is set on CguValidationFailure events reporting missing managed policies.
+	cguMissingPoliciesAnnotation = "cgu.openshift.io/missing-policies"
+	// cguTimedoutClustersAnnotation is set on CguTimedout events reporting which clusters timed out.
+	cguTimedoutClustersAnnotation = "cgu.openshift.io/timedout-clusters"
+)
+
+// cguDebugAnnotations lists the annotation keys formatCGUEvents checks for on each event, in the order they
+// should be printed when present. Kept as an ordered slice (rather than ranging over a map) so debug output is
+// stable across runs, which matters when diffing jenkins logs between runs.
+var cguDebugAnnotations = []string{
+	cguMissingClustersAnnotation,
+	cguMissingClustersCountAnnotation,
+	cguMissingPoliciesAnnotation,
+	cguTimedoutClustersAnnotation,
+}
+
+// cguDebugAnnotationFields maps each annotation in cguDebugAnnotations to a bare logfmt field name (dots and
+// slashes aren't friendly logfmt keys) for formatCGUEventLogfmt. Ordered for stable output, same reason as
+// cguDebugAnnotations above.
+var cguDebugAnnotationFields = []struct {
+	annotationKey string
+	logfmtField   string
+}{
+	{cguMissingClustersAnnotation, "missing_clusters"},
+	{cguMissingClustersCountAnnotation, "missing_clusters_count"},
+	{cguMissingPoliciesAnnotation, "missing_policies"},
+	{cguTimedoutClustersAnnotation, "timedout_clusters"},
+}
+
+// talmCguCheckpointLogTag and talmCguEventLogTag are stable, literal markers prefixed to every
+// PrintCGUEventsCheckpoint log line. Unlike grepping for "cguevents.go:<line>", these tags don't shift when this
+// file is edited, and they let a log consumer (e.g. `rg 'TALM_CGU_EVENT tc=47948'`) filter or extract exactly the
+// lines it wants without multi-line context flags — see TALM-events-implementation-plan.md's debug-output notes.
+const (
+	talmCguCheckpointLogTag = "TALM_CGU_CHECKPOINT"
+	talmCguEventLogTag      = "TALM_CGU_EVENT"
+)
 
 // GetCGUEvents lists events.k8s.io/v1 events regarding ClusterGroupUpgrade resources in tsparams.TestNamespace on
 // the hub cluster, sorted by creation timestamp (oldest first). When cguName is non-empty, results are further
@@ -82,27 +130,73 @@ func PrintCGUEvents() {
 }
 
 // PrintCGUEventsCheckpoint is a temporary debugging helper that logs the ClusterGroupUpgrade events currently
-// present for cguName, labeled with checkpoint (the test milestone just reached) and expected (the event
-// reasons/scopes TALM-events-test-plan.md / TALM-events-implementation-plan.md say should be present at this
-// point), so actual behavior can be compared against the plans before real assertions are coded.
+// present for cguName as one TALM_CGU_CHECKPOINT summary line followed by one TALM_CGU_EVENT line per event,
+// logfmt-style (space-separated key=value pairs, double-quoted free-text values). Every line is self-contained
+// (repeats tc/checkpoint/cgu) and independently greppable, so a log consumer never needs multi-line context to
+// pull out just this checkpoint's events — e.g. `rg 'TALM_CGU_EVENT tc=47948'` or `rg -o 'reason=\S+'`.
+//
+// tcID is the Polarion test case ID (e.g. "47948") so a checkpoint is self-identifying without cross-referencing
+// ginkgo's [It]/failure-summary output. checkpoint labels the test milestone just reached, and expected lists the
+// event reason/scope combinations TALM-events-test-plan.md / TALM-events-implementation-plan.md say should be
+// present at this point, for human comparison against actual (this helper does not assert; see package doc).
 //
 // This never fails the test: if fetching events errors, the error is logged and the function returns without
 // panicking, so a broken event fetch can never mask or replace a real test failure. Call it between a milestone
 // wait (e.g. WaitForCondition) and that wait's own Expect(err) assertion, so the checkpoint is captured on a
 // best-effort basis even if the wait itself timed out.
-func PrintCGUEventsCheckpoint(checkpoint, cguName string, expected ...string) {
+func PrintCGUEventsCheckpoint(tcID, checkpoint, cguName string, expected ...string) {
 	cguEvents, err := GetCGUEvents(cguName)
 	if err != nil {
-		klog.V(tsparams.LogLevel).Infof(
-			"[%s] Failed to get CGU events for %q in the %s namespace: %v",
-			checkpoint, cguName, tsparams.TestNamespace, err)
+		klog.V(tsparams.LogLevel).Infof("%s tc=%s checkpoint=%s cgu=%s error=%s",
+			talmCguCheckpointLogTag, tcID, logfmtQuote(checkpoint), cguName, logfmtQuote(err.Error()))
 
 		return
 	}
 
-	klog.V(tsparams.LogLevel).Infof(
-		"[%s] CGU %q events - expected: [%s], actual:\n%s",
-		checkpoint, cguName, strings.Join(expected, ", "), formatCGUEvents(cguEvents))
+	klog.V(tsparams.LogLevel).Infof("%s tc=%s checkpoint=%s cgu=%s expected=%s event_count=%d",
+		talmCguCheckpointLogTag, tcID, logfmtQuote(checkpoint), cguName,
+		logfmtQuote(strings.Join(expected, "; ")), len(cguEvents))
+
+	for _, event := range cguEvents {
+		klog.V(tsparams.LogLevel).Infof("%s", formatCGUEventLogfmt(tcID, checkpoint, cguName, event))
+	}
+}
+
+// formatCGUEventLogfmt renders a single event as one TALM_CGU_EVENT logfmt line carrying the checkpoint's
+// tc/checkpoint/cgu context plus that event's timestamp, type, reason, scope, any negative-path annotations from
+// cguDebugAnnotationFields that are present, and note. Kept separate from PrintCGUEventsCheckpoint so the
+// per-event line format can be reused or tested independently of the surrounding checkpoint/summary logic.
+func formatCGUEventLogfmt(tcID, checkpoint, cguName string, event *eventsv1.Event) string {
+	scope := event.Annotations[cguEventScopeAnnotation]
+	if scope == "" {
+		scope = "-"
+	}
+
+	fields := []string{
+		talmCguEventLogTag,
+		"tc=" + tcID,
+		"checkpoint=" + logfmtQuote(checkpoint),
+		"cgu=" + cguName,
+		"ts=" + event.CreationTimestamp.Format(time.RFC3339),
+		"type=" + event.Type,
+		"reason=" + event.Reason,
+		"scope=" + scope,
+	}
+
+	for _, annotation := range cguDebugAnnotationFields {
+		if value, ok := event.Annotations[annotation.annotationKey]; ok && value != "" {
+			fields = append(fields, annotation.logfmtField+"="+logfmtQuote(value))
+		}
+	}
+
+	return strings.Join(append(fields, "note="+logfmtQuote(event.Note)), " ")
+}
+
+// logfmtQuote double-quotes value and escapes any embedded quotes/backslashes/newlines (via strconv.Quote), so
+// free-text fields in TALM_CGU_CHECKPOINT/TALM_CGU_EVENT lines (checkpoint labels, expected lists, annotation
+// values, notes) are always a single well-formed logfmt token even when they contain spaces or commas.
+func logfmtQuote(value string) string {
+	return strconv.Quote(value)
 }
 
 // ClearCGUEvents deletes all ClusterGroupUpgrade events in tsparams.TestNamespace on the hub cluster. It is meant to
@@ -137,7 +231,8 @@ func ClearCGUEvents() {
 }
 
 // formatCGUEvents renders events as a compact, human-readable multi-line summary for debug logging: creation time,
-// type, reason, scope annotation, regarding name, and note per event.
+// type, reason, scope annotation, regarding name, the negative-path annotations in cguDebugAnnotations (when
+// present), and note per event.
 func formatCGUEvents(cguEvents []*eventsv1.Event) string {
 	if len(cguEvents) == 0 {
 		return "  (none)"
@@ -151,11 +246,35 @@ func formatCGUEvents(cguEvents []*eventsv1.Event) string {
 			scope = "-"
 		}
 
-		lines = append(lines, fmt.Sprintf(
-			"  %s  %-7s %-36s scope=%-7s regarding=%-24s note=%s",
-			event.CreationTimestamp.Format(time.RFC3339), event.Type, event.Reason, scope,
-			event.Regarding.Name, event.Note))
+		line := fmt.Sprintf("  %s  %-7s %-36s scope=%-7s regarding=%-24s",
+			event.CreationTimestamp.Format(time.RFC3339), event.Type, event.Reason, scope, event.Regarding.Name)
+
+		if annotations := formatCGUDebugAnnotations(event.Annotations); annotations != "" {
+			line += " " + annotations
+		}
+
+		lines = append(lines, line+fmt.Sprintf(" note=%s", event.Note))
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+// formatCGUDebugAnnotations renders whichever keys in cguDebugAnnotations are present and non-empty on
+// annotations as a single "annotations=[key=value, ...]" segment, or "" when none of them are present. Kept
+// separate from formatCGUEvents so scope formatting and negative-path annotation formatting don't get tangled
+// into one function.
+func formatCGUDebugAnnotations(annotations map[string]string) string {
+	pairs := make([]string, 0, len(cguDebugAnnotations))
+
+	for _, key := range cguDebugAnnotations {
+		if value, ok := annotations[key]; ok && value != "" {
+			pairs = append(pairs, fmt.Sprintf("%s=%s", key, value))
+		}
+	}
+
+	if len(pairs) == 0 {
+		return ""
+	}
+
+	return fmt.Sprintf("annotations=[%s]", strings.Join(pairs, ", "))
 }
