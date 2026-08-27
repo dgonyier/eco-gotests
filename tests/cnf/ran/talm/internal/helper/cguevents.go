@@ -63,6 +63,10 @@ var cguDebugAnnotationFields = []struct {
 	{cguTimedoutClustersAnnotation, "timedout_clusters"},
 }
 
+// DefaultCGUEventCheckpointDelaySeconds is the wait before listing events in PrintCGUEventsCheckpoint when
+// delaySeconds is zero or negative (pass 0 at call sites to use this default).
+const DefaultCGUEventCheckpointDelaySeconds = 10
+
 // talmCguCheckpointLogTag and talmCguEventLogTag are stable, literal markers prefixed to every
 // PrintCGUEventsCheckpoint log line. Unlike grepping for "cguevents.go:<line>", these tags don't shift when this
 // file is edited, and they let a log consumer (e.g. `rg 'TALM_CGU_EVENT tc=47948'`) filter or extract exactly the
@@ -140,21 +144,32 @@ func PrintCGUEvents() {
 // event reason/scope combinations TALM-events-test-plan.md / TALM-events-implementation-plan.md say should be
 // present at this point, for human comparison against actual (this helper does not assert; see package doc).
 //
+// delaySeconds controls how long to wait before listing events, giving TALM time to emit events after a condition
+// becomes true. Pass 0 (or any value <= 0) to use DefaultCGUEventCheckpointDelaySeconds (10); pass a positive
+// integer to override.
+//
 // This never fails the test: if fetching events errors, the error is logged and the function returns without
 // panicking, so a broken event fetch can never mask or replace a real test failure. Call it between a milestone
 // wait (e.g. WaitForCondition) and that wait's own Expect(err) assertion, so the checkpoint is captured on a
 // best-effort basis even if the wait itself timed out.
-func PrintCGUEventsCheckpoint(tcID, checkpoint, cguName string, expected ...string) {
+func PrintCGUEventsCheckpoint(tcID, checkpoint, cguName string, delaySeconds int, expected ...string) {
+	delay := delaySeconds
+	if delay <= 0 {
+		delay = DefaultCGUEventCheckpointDelaySeconds
+	}
+
+	time.Sleep(time.Duration(delay) * time.Second)
+
 	cguEvents, err := GetCGUEvents(cguName)
 	if err != nil {
-		klog.V(tsparams.LogLevel).Infof("%s tc=%s checkpoint=%s cgu=%s error=%s",
-			talmCguCheckpointLogTag, tcID, logfmtQuote(checkpoint), cguName, logfmtQuote(err.Error()))
+		klog.V(tsparams.LogLevel).Infof("%s tc=%s checkpoint=%s cgu=%s delay_seconds=%d error=%s",
+			talmCguCheckpointLogTag, tcID, logfmtQuote(checkpoint), cguName, delay, logfmtQuote(err.Error()))
 
 		return
 	}
 
-	klog.V(tsparams.LogLevel).Infof("%s tc=%s checkpoint=%s cgu=%s expected=%s event_count=%d",
-		talmCguCheckpointLogTag, tcID, logfmtQuote(checkpoint), cguName,
+	klog.V(tsparams.LogLevel).Infof("%s tc=%s checkpoint=%s cgu=%s delay_seconds=%d expected=%s event_count=%d",
+		talmCguCheckpointLogTag, tcID, logfmtQuote(checkpoint), cguName, delay,
 		logfmtQuote(strings.Join(expected, "; ")), len(cguEvents))
 
 	for _, event := range cguEvents {

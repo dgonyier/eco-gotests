@@ -405,7 +405,7 @@ var _ = Describe("TALM precache", Label(tsparams.LabelPreCacheTestCases), func()
 				// or a distinct precache-specific event for an invalid custom precache image before implementing.
 				By("printing CGU events before checking CGU pre cache failed with UnrecoverableError")
 
-				helper.PrintCGUEventsCheckpoint("64747", "before invalid custom precache image status check", tsparams.CguName,
+				helper.PrintCGUEventsCheckpoint("64747", "before invalid custom precache image status check", tsparams.CguName, 0,
 					"unconfirmed - CguTimedout/batch+global RemediationInBatchTimeout+RemediationTimeout, "+
 						"or a distinct precache-specific event")
 
@@ -524,7 +524,7 @@ var _ = Describe("TALM precache", Label(tsparams.LabelPreCacheTestCases), func()
 				// TALM behavior, not to assume it.
 				By("printing CGU events after waiting for pre cache to be valid (baseline, likely none yet)")
 
-				helper.PrintCGUEventsCheckpoint("54286", "precache valid", tsparams.CguName,
+				helper.PrintCGUEventsCheckpoint("54286", "precache valid", tsparams.CguName, 0,
 					"baseline - likely no remediation events yet")
 
 				Expect(err).ToNot(HaveOccurred(), "Failed to wait for pre cache to be valid")
@@ -544,7 +544,7 @@ var _ = Describe("TALM precache", Label(tsparams.LabelPreCacheTestCases), func()
 
 				By("printing CGU events after waiting for the CGU to report one spoke failed precaching")
 
-				helper.PrintCGUEventsCheckpoint("54286", "one spoke failed precaching, other continues", tsparams.CguName,
+				helper.PrintCGUEventsCheckpoint("54286", "one spoke failed precaching, other continues", tsparams.CguName, 0,
 					"CguTimedout/batch(0) RemediationInBatchTimeout", "CguSuccess/cluster(spoke2) RemediationInClusterCompleted",
 					"CguSuccess/batch(1) RemediationInBatchCompleted", "CguSuccess/global RemediationCompleted")
 
@@ -554,7 +554,7 @@ var _ = Describe("TALM precache", Label(tsparams.LabelPreCacheTestCases), func()
 
 				// Placed before assertPrecacheStatus (rather than after) since that helper's own Eventually/Should
 				// assertion can fail and stop the test before any code after it would run.
-				helper.PrintCGUEventsCheckpoint("54286", "before final precache status check for spoke1", tsparams.CguName,
+				helper.PrintCGUEventsCheckpoint("54286", "before final precache status check for spoke1", tsparams.CguName, 0,
 					"terminal - full expected set from the previous checkpoint should still be present")
 
 				By("checking CGU reports spoke 1 failed with UnrecoverableError")
@@ -623,7 +623,7 @@ var _ = Describe("TALM precache", Label(tsparams.LabelPreCacheTestCases), func()
 
 					By("printing CGU events after waiting for spoke 2 to complete")
 
-					helper.PrintCGUEventsCheckpoint("54854", "spoke2 batch remediation complete", tsparams.CguName,
+					helper.PrintCGUEventsCheckpoint("54854", "spoke2 batch remediation complete", tsparams.CguName, 0,
 						"CguSuccess/cluster(spoke2) RemediationInClusterCompleted")
 
 					Expect(err).ToNot(HaveOccurred(), "Failed to wait for spoke 2 batch remediation progress to complete")
@@ -634,7 +634,7 @@ var _ = Describe("TALM precache", Label(tsparams.LabelPreCacheTestCases), func()
 
 					By("printing CGU events after waiting for the CGU to timeout (terminal)")
 
-					helper.PrintCGUEventsCheckpoint("54854", "CGU timed out, down spoke in first batch", tsparams.CguName,
+					helper.PrintCGUEventsCheckpoint("54854", "CGU timed out, down spoke in first batch", tsparams.CguName, 0,
 						"CguTimedout/batch(0) RemediationInBatchTimeout", "CguSuccess/cluster RemediationInClusterCompleted",
 						"CguSuccess/batch(1) RemediationInBatchCompleted", "CguSuccess/global RemediationCompleted")
 
@@ -647,7 +647,7 @@ var _ = Describe("TALM precache", Label(tsparams.LabelPreCacheTestCases), func()
 				// were already emitted there. Printed first, before any assertion in this It, on a best-effort basis.
 				By("printing CGU events for the CGU shared with OCP-54854 (spoke1 offline, spoke2 completes)")
 
-				helper.PrintCGUEventsCheckpoint("59946", "post-completion action check, spoke1 offline", tsparams.CguName,
+				helper.PrintCGUEventsCheckpoint("59946", "post-completion action check, spoke1 offline", tsparams.CguName, 0,
 					"CguTimedout/batch RemediationInBatchTimeout (spoke1)",
 					"CguSuccess/cluster(spoke2) RemediationInClusterCompleted", "CguSuccess/global RemediationCompleted")
 

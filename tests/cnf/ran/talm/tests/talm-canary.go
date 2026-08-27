@@ -100,7 +100,7 @@ var _ = Describe("TALM Canary Tests", Label(tsparams.LabelCanaryTestCases), func
 
 		By("printing CGU events after waiting for the CGU to timeout due to canary failure")
 
-		helper.PrintCGUEventsCheckpoint("47954", "first canary timed out, CGU stopped", tsparams.CguName,
+		helper.PrintCGUEventsCheckpoint("47954", "first canary timed out, CGU stopped", tsparams.CguName, 0,
 			"CguTimedout/batch RemediationInBatchTimeout (first canary batch)", "CguTimedout/global RemediationTimeout")
 
 		Expect(err).ToNot(HaveOccurred(), "Failed to wait for timeout due to canary failure")
@@ -137,7 +137,7 @@ var _ = Describe("TALM Canary Tests", Label(tsparams.LabelCanaryTestCases), func
 
 		By("printing CGU events after waiting for the CGU to finish successfully")
 
-		helper.PrintCGUEventsCheckpoint("47947", "CGU finished successfully, all canaries succeeded", tsparams.CguName,
+		helper.PrintCGUEventsCheckpoint("47947", "CGU finished successfully, all canaries succeeded", tsparams.CguName, 0,
 			"CguStarted/global RemediationStarted", "CguStarted/batch RemediationInBatchStarted (each batch)",
 			"CguSuccess/cluster RemediationInClusterCompleted (each canary)",
 			"CguSuccess/batch RemediationInBatchCompleted (each batch)", "CguSuccess/global RemediationCompleted")
