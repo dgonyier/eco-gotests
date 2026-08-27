@@ -12,6 +12,7 @@ type SeedGenerationConfig struct {
 	*config.GeneralConfig
 	TargetSNOKubeConfig string `envconfig:"ECO_LCA_IBU_CNF_KUBECONFIG_TARGET_SNO"`
 	IbguSeedImage       string `yaml:"ibgu_seed_image" envconfig:"ECO_LCA_IBGU_SEED_IMAGE"`
+	IbguRecertImage     string `yaml:"ibgu_recert_image" envconfig:"ECO_LCA_IBGU_RECERT_IMAGE"`
 }
 
 // NewSeedGenerationConfig returns an instance of SeedGenerationConfig.

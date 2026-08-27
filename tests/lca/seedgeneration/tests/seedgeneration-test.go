@@ -79,8 +79,8 @@ var _ = Describe(
 				generatedImage, err := seedimage.GenerateSeedImage(
 					TargetSNOAPIClient,
 					imageName,
-					"",             // recertImage - use default
-					30*time.Minute, // timeout
+					SeedGenerationConfig.IbguRecertImage, // recertImage - use config or default if empty
+					30*time.Minute,                       // timeout
 				)
 				Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to generate seed image: %v", err))
 				Expect(generatedImage).To(Equal(imageName), "Generated image location should match source image location")
