@@ -283,7 +283,8 @@ var _ = Describe("TALM Batching Tests", Label(tsparams.LabelBatchingTestCases), 
 
 			By("printing CGU events after waiting for the CGU to timeout (terminal)")
 
-			helper.PrintCGUEventsCheckpoint("74753", "CGU timeout with Continue action, second batch succeeds", tsparams.CguName, 0,
+			helper.PrintCGUEventsCheckpoint("74753",
+				"CGU timeout with Continue action, second batch succeeds", tsparams.CguName, 0,
 				"CguTimedout/batch(0) RemediationInBatchTimeout", "CguSuccess/cluster(spoke2) RemediationInClusterCompleted",
 				"CguSuccess/batch(1) RemediationInBatchCompleted",
 				"CguSuccess/global RemediationCompleted (confirm on live cluster)")
@@ -341,7 +342,8 @@ var _ = Describe("TALM Batching Tests", Label(tsparams.LabelBatchingTestCases), 
 
 				By("printing CGU events after waiting for the CGU to timeout (terminal)")
 
-				helper.PrintCGUEventsCheckpoint("54296", "CGU timeout with Continue action, second batch fails", tsparams.CguName, 0,
+				helper.PrintCGUEventsCheckpoint("54296",
+					"CGU timeout with Continue action, second batch fails", tsparams.CguName, 0,
 					"CguSuccess/batch(0) RemediationInBatchCompleted (or cluster completion for spoke1)",
 					"CguTimedout/batch(1) RemediationInBatchTimeout", "CguTimedout/global RemediationTimeout")
 
