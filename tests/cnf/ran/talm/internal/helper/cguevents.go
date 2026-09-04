@@ -54,7 +54,7 @@ func GetCGUEvents(cguName string) ([]*eventsv1.Event, error) {
 	}
 
 	sort.Slice(cguEvents, func(i, j int) bool {
-		return cguEvents[i].CreationTimestamp.Before(&cguEvents[j].CreationTimestamp)
+		return cguEvents[i].EventTime.Time.Before(cguEvents[j].EventTime.Time)
 	})
 
 	return cguEvents, nil
@@ -252,7 +252,7 @@ func formatCGUEventLogfmt(tcID, checkpoint, cguName string, event *eventsv1.Even
 		"tc=" + tcID,
 		"checkpoint=" + logfmtQuote(checkpoint),
 		"cgu=" + cguName,
-		"ts=" + event.CreationTimestamp.Format(time.RFC3339),
+		"ts=" + event.EventTime.Time.Format(time.RFC3339Nano),
 		"type=" + event.Type,
 		"reason=" + event.Reason,
 		"scope=" + scope,
@@ -287,7 +287,7 @@ func formatCGUEvents(cguEvents []*eventsv1.Event) string {
 		}
 
 		line := fmt.Sprintf("  %s  %-7s %-36s scope=%-7s regarding=%-24s",
-			event.CreationTimestamp.Format(time.RFC3339), event.Type, event.Reason, scope, event.Regarding.Name)
+			event.EventTime.Time.Format(time.RFC3339Nano), event.Type, event.Reason, scope, event.Regarding.Name)
 
 		if annotations := formatCGUDebugAnnotations(event.Annotations); annotations != "" {
 			line += " " + annotations
