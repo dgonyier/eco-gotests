@@ -245,10 +245,15 @@ var _ = Describe("TALM Blocking CRs Tests", Label(tsparams.LabelBlockingCRTestCa
 			eventsB, err := helper.GetCGUEvents(tsparams.CguName + blockingB)
 			Expect(err).ToNot(HaveOccurred(), "[EVENT CHECK] Failed to retrieve CGU B events")
 
-			// Negative check: CGU B should NOT have any CguStarted events while blocked
-			startedEvents := helper.FindEventsByReason(eventsB, tsparams.CguStarted)
-			Expect(startedEvents).To(BeEmpty(),
-				"[EVENT CHECK] CGU B should not have started remediation while blocked by missing CR")
+			// CguStarted/global is intentional while blocked: CGU timeout includes the period
+			// waiting for blocking CRs, so the CGU has "started" globally but should not begin
+			// cluster or batch remediation until unblocked.
+			clusterStarts := helper.FindEventsByReasonAndScope(eventsB, tsparams.CguStarted, tsparams.EventScopeCluster)
+			batchStarts := helper.FindEventsByReasonAndScope(eventsB, tsparams.CguStarted, tsparams.EventScopeBatch)
+			Expect(clusterStarts).To(BeEmpty(),
+				"[EVENT CHECK] CGU B should not have cluster-scoped starts while blocked by missing CR")
+			Expect(batchStarts).To(BeEmpty(),
+				"[EVENT CHECK] CGU B should not have batch-scoped starts while blocked by missing CR")
 
 			By("Setting up CGU A")
 
