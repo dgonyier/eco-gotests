@@ -58,7 +58,7 @@ var _ = Describe("TALM Blocking CRs Tests", Label(tsparams.LabelBlockingCRTestCa
 
 		By("Deleting test namespaces on spoke 1")
 
-		err = namespace.NewBuilder(Spoke1APIClient, tsparams.TemporaryNamespace+blockingA).
+		err := namespace.NewBuilder(Spoke1APIClient, tsparams.TemporaryNamespace+blockingA).
 			DeleteAndWait(5 * time.Minute)
 		Expect(err).ToNot(HaveOccurred(), "Failed to delete namespace for blocking A on spoke 1")
 

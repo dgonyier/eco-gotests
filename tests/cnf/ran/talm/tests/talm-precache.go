@@ -164,8 +164,8 @@ var _ = Describe("TALM precache", Label(tsparams.LabelPreCacheTestCases), func()
 				}
 			})
 
-		AfterEach(func() {
-			err := cgu.NewPreCachingConfigBuilder(
+			AfterEach(func() {
+				err := cgu.NewPreCachingConfigBuilder(
 					HubAPIClient, tsparams.PreCachingConfigName, tsparams.TestNamespace).Delete()
 				Expect(err).ToNot(HaveOccurred(), "Failed to delete PreCachingConfig on hub")
 
@@ -378,10 +378,10 @@ var _ = Describe("TALM precache", Label(tsparams.LabelPreCacheTestCases), func()
 				clusterVersion, err := helper.GetClusterVersionDefinition(Spoke1APIClient, "Image")
 				Expect(err).ToNot(HaveOccurred(), "Failed to get cluster version definition")
 
-			_, err = helper.SetupCguWithClusterVersion(cguBuilder, clusterVersion)
-			Expect(err).ToNot(HaveOccurred(), "Failed to setup cgu with cluster version")
+				_, err = helper.SetupCguWithClusterVersion(cguBuilder, clusterVersion)
+				Expect(err).ToNot(HaveOccurred(), "Failed to setup cgu with cluster version")
 
-			By("waiting until CGU pre cache failed with UnrecoverableError")
+				By("waiting until CGU pre cache failed with UnrecoverableError")
 				assertPrecacheStatus(RANConfig.Spoke1Name, "UnrecoverableError")
 			})
 
@@ -464,8 +464,8 @@ var _ = Describe("TALM precache", Label(tsparams.LabelPreCacheTestCases), func()
 		})
 
 		Context("precaching with one managed cluster powered off and unavailable", func() {
-		AfterEach(func() {
-			By("cleaning up resources on hub")
+			AfterEach(func() {
+				By("cleaning up resources on hub")
 
 				errorList := setup.CleanupTestResourcesOnHub(HubAPIClient, tsparams.TestNamespace, "")
 				Expect(errorList).To(BeEmpty(), "Failed to clean up test resources on hub")
@@ -485,9 +485,9 @@ var _ = Describe("TALM precache", Label(tsparams.LabelPreCacheTestCases), func()
 
 				By("waiting for pre cache to confirm it is valid")
 
-			cguBuilder, err = cguBuilder.WaitForCondition(tsparams.CguPreCacheValidCondition, 5*time.Minute)
+				cguBuilder, err = cguBuilder.WaitForCondition(tsparams.CguPreCacheValidCondition, 5*time.Minute)
 
-			Expect(err).ToNot(HaveOccurred(), "Failed to wait for pre cache to be valid")
+				Expect(err).ToNot(HaveOccurred(), "Failed to wait for pre cache to be valid")
 
 				By("waiting until CGU Succeeded")
 				assertPrecacheStatus(RANConfig.Spoke2Name, "Succeeded")
@@ -500,19 +500,19 @@ var _ = Describe("TALM precache", Label(tsparams.LabelPreCacheTestCases), func()
 
 				By("waiting until CGU reports one spoke failed precaching")
 
-			_, err = cguBuilder.WaitForCondition(tsparams.CguPreCachePartialCondition, 5*time.Minute)
+				_, err = cguBuilder.WaitForCondition(tsparams.CguPreCachePartialCondition, 5*time.Minute)
 
-			Expect(err).ToNot(HaveOccurred(), "Failed to wait for CGU to report one spoke failed precaching")
+				Expect(err).ToNot(HaveOccurred(), "Failed to wait for CGU to report one spoke failed precaching")
 
-			By("checking CGU reports spoke 1 failed with UnrecoverableError")
+				By("checking CGU reports spoke 1 failed with UnrecoverableError")
 				assertPrecacheStatus(RANConfig.Spoke1Name, "UnrecoverableError")
 			})
 		})
 
-	Context("batching with one managed cluster powered off and unavailable", Ordered, func() {
-		var cguBuilder *cgu.CguBuilder
+		Context("batching with one managed cluster powered off and unavailable", Ordered, func() {
+			var cguBuilder *cgu.CguBuilder
 
-		BeforeAll(func() {
+			BeforeAll(func() {
 				By("creating and setting up CGU with two spokes, one unavailable")
 
 				cguBuilder = cgu.NewCguBuilder(HubAPIClient, tsparams.CguName, tsparams.TestNamespace, 1).
@@ -560,15 +560,15 @@ var _ = Describe("TALM precache", Label(tsparams.LabelPreCacheTestCases), func()
 				reportxml.ID("54854"), func() {
 					By("waiting for spoke 2 to complete successfully")
 
-				cguBuilder, err := cguBuilder.WaitUntilClusterComplete(RANConfig.Spoke2Name, 22*time.Minute)
+					cguBuilder, err := cguBuilder.WaitUntilClusterComplete(RANConfig.Spoke2Name, 22*time.Minute)
 
-				Expect(err).ToNot(HaveOccurred(), "Failed to wait for spoke 2 batch remediation progress to complete")
+					Expect(err).ToNot(HaveOccurred(), "Failed to wait for spoke 2 batch remediation progress to complete")
 
-				By("waiting for the CGU to timeout")
+					By("waiting for the CGU to timeout")
 
-				_, err = cguBuilder.WaitForCondition(tsparams.CguTimeoutReasonCondition, 22*time.Minute)
+					_, err = cguBuilder.WaitForCondition(tsparams.CguTimeoutReasonCondition, 22*time.Minute)
 
-				Expect(err).ToNot(HaveOccurred(), "Failed to wait for CGU to timeout")
+					Expect(err).ToNot(HaveOccurred(), "Failed to wait for CGU to timeout")
 				})
 
 			// 59946 - Post completion action on a per cluster basis
