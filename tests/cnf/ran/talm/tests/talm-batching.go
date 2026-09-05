@@ -547,7 +547,7 @@ var _ = Describe("TALM Batching Tests", Label(tsparams.LabelBatchingTestCases), 
 		It("should complete the CGU when two clusters are successful in a single batch", reportxml.ID("47947"), func() {
 			By("creating the CGU and associated resources")
 
-			cguBuilder := cgu.NewCguBuilder(HubAPIClient, tsparams.CguName, tsparams.TestNamespace, 1).
+			cguBuilder := cgu.NewCguBuilder(HubAPIClient, tsparams.CguName, tsparams.TestNamespace, 2).
 				WithManagedPolicy(tsparams.PolicyName)
 			cguBuilder.Definition.Spec.RemediationStrategy.Timeout = 15
 			cguBuilder.Definition.Spec.Enable = ptr.To(false)
