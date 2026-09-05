@@ -50,10 +50,6 @@ var _ = Describe("TALM Canary Tests", Label(tsparams.LabelCanaryTestCases), func
 
 	// 47954 - Tests upgrade aborted due to short timeout.
 	It("should stop the CGU where first canary fails", reportxml.ID("47954"), func() {
-		Skip("TEMPORARY DEV SKIP: Test will FAIL due to KNOWN BUG - " +
-			"TALM does not emit CguTimedout/batch event for canary batch timeout. " +
-			"Remove this Skip() for production to expose the bug.")
-
 		var err error
 
 		By("verifying the temporary namespace does not exist on spoke 1 and 2")

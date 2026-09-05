@@ -66,10 +66,6 @@ var _ = Describe("TALM Batching Tests", Label(tsparams.LabelBatchingTestCases), 
 	When("a single spoke is missing", Label(tsparams.LabelMissingSpokeTestCases), func() {
 		// 47949 - Tests selected clusters must be non-compliant AND included in CGU.
 		It("should report a missing spoke", reportxml.ID("47949"), func() {
-			Skip("TEMPORARY DEV SKIP: Test will FAIL due to KNOWN BUG - " +
-				"TALM omits scope annotation on CguValidationFailure events. " +
-				"Remove this Skip() for production to expose the bug.")
-
 			By("creating the CGU with non-existent cluster and policy")
 
 			cguBuilder := cgu.NewCguBuilder(HubAPIClient, tsparams.CguName, tsparams.TestNamespace, 1).
@@ -111,10 +107,6 @@ var _ = Describe("TALM Batching Tests", Label(tsparams.LabelBatchingTestCases), 
 	When("a policy is missing", Label(tsparams.LabelMissingPolicyTestCases), func() {
 		// 47955 - Tests upgrade rejected due to specified managed policies missing
 		It("should report the missing policy", reportxml.ID("47955"), func() {
-			Skip("TEMPORARY DEV SKIP: Test will FAIL due to KNOWN BUG - " +
-				"TALM omits scope annotation on CguValidationFailure events. " +
-				"Remove this Skip() for production to expose the bug.")
-
 			By("create and enable a CGU with a managed policy that does not exist")
 
 			cguBuilder := cgu.NewCguBuilder(HubAPIClient, tsparams.CguName, tsparams.TestNamespace, 1).
