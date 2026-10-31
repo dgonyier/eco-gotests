@@ -11,6 +11,8 @@ const (
 	LabelUpgradeAbortFlow = "ibu-upgrade-abort"
 	// LabelRollbackFlow represents rollback label that can be used for test cases selection.
 	LabelRollbackFlow = "ibu-auto-rollback"
+	// LabelPrepTimeoutFeedback selects the Prep rollout-timeout feedback check for OCPBUGS-134615.
+	LabelPrepTimeoutFeedback = "ibu-prep-timeout-feedback"
 
 	// IbuCguNamespace is the namespace where IBU CGUs created on target hub.
 	IbuCguNamespace = "default"
@@ -23,6 +25,9 @@ const (
 
 	// AbortIbguName is the namespace where IBU CGUs created on target hub.
 	AbortIbguName = "abortibgu"
+
+	// PrepTimeoutIbguName is the hub IBGU used to time out Prep and read LCA condition feedback.
+	PrepTimeoutIbguName = "prepfeedbackibgu"
 
 	// PrePrepCguName is the name of pre-prep cgu.
 	PrePrepCguName = "cgu-ibu-pre-prep"
