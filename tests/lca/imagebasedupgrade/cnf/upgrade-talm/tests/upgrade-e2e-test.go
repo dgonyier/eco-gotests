@@ -121,10 +121,31 @@ var _ = Describe(
 				Create()
 			Expect(err).ToNot(HaveOccurred(), "Failed to create rollback Ibgu.")
 
+			By("Verifying Rollback ManifestWork surfaces the LCA RollbackInProgress message")
+
+			Expect(cnfhelper.WaitForRollbackFeedbackPath(tsparams.IbguName, 3*time.Minute)).To(Succeed(),
+				"Rollback ManifestWorkReplicaSet feedback path is malformed")
+
+			_, err = cnfhelper.WaitForRollbackInProgressFeedback(
+				tsparams.IbguName, tsparams.TargetSnoClusterName, 15*time.Minute)
+			Expect(err).NotTo(HaveOccurred(),
+				"Rollback ManifestWork did not report the spoke RollbackInProgress message")
+
 			By("Waiting until spoke IBU Rollback completes")
 
 			Expect(cnfhelper.WaitForSpokeIBU(cnfhelper.SpokeRollbackCompleted, 30*time.Minute)).To(Succeed(),
 				"Rollback did not complete on the spoke IBU")
+
+			By("Verifying FinalizeRollback ManifestWork surfaces the LCA Idle reason")
+
+			Expect(cnfhelper.WaitForIdleReasonFeedbackPath(
+				tsparams.IbguName, ibguv1alpha1.FinalizeRollback, 3*time.Minute)).To(Succeed(),
+				"FinalizeRollback ManifestWorkReplicaSet feedback path is malformed")
+
+			_, err = cnfhelper.WaitForIdleReasonFeedback(
+				tsparams.IbguName, ibguv1alpha1.FinalizeRollback, tsparams.TargetSnoClusterName, 10*time.Minute)
+			Expect(err).NotTo(HaveOccurred(),
+				"FinalizeRollback ManifestWork did not report the spoke Idle reason")
 
 			By("Waiting until spoke IBU returns to Idle")
 
