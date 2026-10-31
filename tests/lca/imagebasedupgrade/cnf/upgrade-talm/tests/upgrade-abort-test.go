@@ -57,6 +57,16 @@ var _ = Describe(
 			Expect(cnfhelper.WaitForSpokeIBU(cnfhelper.SpokeUpgradeInProgress, 10*time.Minute)).To(Succeed(),
 				"Upgrade did not start on the spoke IBU before pivot")
 
+			By("Verifying Upgrade ManifestWork surfaces the LCA UpgradeInProgress message")
+
+			Expect(cnfhelper.WaitForUpgradeFeedbackPath(tsparams.IbguName, 3*time.Minute)).To(Succeed(),
+				"Upgrade ManifestWorkReplicaSet feedback path is malformed")
+
+			_, err = cnfhelper.WaitForUpgradeInProgressFeedback(
+				tsparams.IbguName, tsparams.TargetSnoClusterName, 5*time.Minute)
+			Expect(err).NotTo(HaveOccurred(),
+				"Upgrade ManifestWork did not report the spoke UpgradeInProgress message")
+
 			By("Creating abort IBGU")
 
 			abortIbgu, err := cnfhelper.NewIbgu(tsparams.AbortIbguName).
