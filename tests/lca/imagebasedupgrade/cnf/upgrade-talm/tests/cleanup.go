@@ -25,7 +25,8 @@ var setupNodeTypes = types.NodeTypeBeforeEach |
 func deleteIbgusAndRecoverIfFailed() {
 	By("Deleting leftover IBGUs on the hub")
 
-	deleteErr := cnfhelper.DeleteIbgus(tsparams.IbguName, tsparams.AbortIbguName, cnfhelper.RecoverIbguName)
+	deleteErr := cnfhelper.DeleteIbgus(
+		tsparams.IbguName, tsparams.AbortIbguName, tsparams.PrepTimeoutIbguName, cnfhelper.RecoverIbguName)
 
 	if shouldRecoverAfterFailedSpec() {
 		By("Recovering spoke cluster health after failed spec")
