@@ -48,6 +48,7 @@ var _ = Describe(
 
 		// OCPBUGS-134615: a stray quote in the Prep feedback JSONPath dropped the LCA
 		// PrepInProgress message from ManifestWork status and from IBGU failedActions.
+		// Abort returns the spoke to Idle for another run.
 		It("Surfaces the LCA PrepInProgress message when Prep times out", reportxml.ID("no-testcase"), func() {
 			By("Creating Prep IBGU with a short rollout timeout, followed by Abort")
 

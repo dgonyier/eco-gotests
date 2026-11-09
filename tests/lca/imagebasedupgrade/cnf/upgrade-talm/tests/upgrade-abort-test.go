@@ -38,6 +38,7 @@ var _ = Describe(
 		// Abort after Prep+Upgrade. Delete the original IBGU after Abort
 		// completes so leftover TALM ManifestWorks cannot re-apply Prep
 		// during WaitUntilHealthy.
+		// OCPBUGS-134615 UpgradeInProgress feedback. Abort returns the spoke to Idle.
 		It("Aborts an upgrade at IBU upgrade stage", reportxml.ID("69055"), func() {
 			By("Creating Prep+Upgrade IBGU")
 
