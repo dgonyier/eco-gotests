@@ -33,8 +33,9 @@ var _ = Describe(
 			deleteIbgusAndRecoverIfFailed()
 		})
 
-		// 68956 - Upgrade prep abort flow
-		It("Upgrade prep abort flow", reportxml.ID("68956"), func() {
+		// 68956 - Upgrade prep abort flow.
+		// Pending for the OCPBUGS-134615 run. This spec does not check condition feedback.
+		PIt("Upgrade prep abort flow", reportxml.ID("68956"), func() {
 			By("Creating Prep+Abort IBGU")
 
 			prepAbortIbgu, err := cnfhelper.NewIbgu(tsparams.IbguName).

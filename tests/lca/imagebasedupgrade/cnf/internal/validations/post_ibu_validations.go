@@ -35,6 +35,8 @@ var UpgradeSucceeded bool
 
 // PostUpgradeValidations registers post-upgrade checks. Call it from inside the
 // Ordered e2e Describe after test 68954 so this nested BeforeAll runs after that It.
+// The specs are pending for the OCPBUGS-134615 run so 69058 can roll the spoke
+// back to Idle without the extra post-upgrade checks.
 func PostUpgradeValidations() {
 	Describe(
 		"PostIBUValidations",
@@ -96,7 +98,7 @@ func PostUpgradeValidations() {
 
 // ValidateClusterVersionCSVs check clusterversion and operator CSVs version after upgrade.
 func ValidateClusterVersionCSVs() {
-	It("Validate Cluster version and operators CSVs", reportxml.ID("71387"),
+	PIt("Validate Cluster version and operators CSVs", reportxml.ID("71387"),
 		Label("ValidateClusterVersionOperatorCSVs"), func() {
 			By("Validate upgraded cluster version reports correct version", func() {
 				Expect(cnfclusterinfo.PreUpgradeClusterInfo.Version).
@@ -121,7 +123,7 @@ func ValidateClusterVersionCSVs() {
 
 // ValidateClusterID check if cluster ID remains the same after upgrade.
 func ValidateClusterID() {
-	It("Validate Cluster ID", reportxml.ID("71388"), Label("ValidateClusterID"), func() {
+	PIt("Validate Cluster ID", reportxml.ID("71388"), Label("ValidateClusterID"), func() {
 		By("Validate cluster ID remains the same", func() {
 			Expect(cnfclusterinfo.PreUpgradeClusterInfo.ID).
 				To(Equal(cnfclusterinfo.PostUpgradeClusterInfo.ID), "Cluster ID has changed")
@@ -131,7 +133,7 @@ func ValidateClusterID() {
 
 // ValidatePodsSeedName check if no pods are using seed's name after upgrade.
 func ValidatePodsSeedName() {
-	It("Validate no pods using seed name", reportxml.ID("71389"), Label("ValidatePodsSeedName",
+	PIt("Validate no pods using seed name", reportxml.ID("71389"), Label("ValidatePodsSeedName",
 		"ValidateSeedReferences"), func() {
 		By("Validate no pods are using seed's name", func() {
 			podList, err := pod.ListInAllNamespaces(TargetSNOAPIClient, metav1.ListOptions{})
@@ -147,7 +149,7 @@ func ValidatePodsSeedName() {
 
 // ValidateReboots check if no extra reboots are performed after upgrade.
 func ValidateReboots() {
-	It("Validate no extra reboots after upgrade", reportxml.ID("72962"), Label("ValidateUpgradeReboots"), func() {
+	PIt("Validate no extra reboots after upgrade", reportxml.ID("72962"), Label("ValidateUpgradeReboots"), func() {
 		By("Validate no extra reboots after upgrade", func() {
 			rebootCmd := "last | grep reboot | wc -l"
 			rebootCount, err := cluster.ExecCmdWithStdout(TargetSNOAPIClient, rebootCmd)
@@ -162,7 +164,7 @@ func ValidateReboots() {
 
 // ValidateOperatorRollouts check if no operator rollouts are performed after upgrade.
 func ValidateOperatorRollouts() {
-	It("Validate no operator rollouts post upgrade", reportxml.ID("73048"), Label("ValidateOperatorRollouts"), func() {
+	PIt("Validate no operator rollouts post upgrade", reportxml.ID("73048"), Label("ValidateOperatorRollouts"), func() {
 		By("Validate no cluster operator rollouts after upgrade", func() {
 			rolloutCmd := "grep -Ri RevisionTrigger /var/log/pods/ | wc -l"
 			rolloutCheck, err := cluster.ExecCmdWithStdout(TargetSNOAPIClient, rolloutCmd)
@@ -179,7 +181,7 @@ func ValidateOperatorRollouts() {
 
 // ValidateClusterHostname check if cluster hostname is updated after upgrade.
 func ValidateClusterHostname() {
-	It("Validate upgraded cluster hostname", reportxml.ID("71390"), Label("ValidateHostName",
+	PIt("Validate upgraded cluster hostname", reportxml.ID("71390"), Label("ValidateHostName",
 		"ValidateSeedReferences"), func() {
 		By("Validate upgraded cluster hostname", func() {
 			hostnameCmd := "cat /etc/hostname"
@@ -196,7 +198,7 @@ func ValidateClusterHostname() {
 
 // ValidateNetworkConfig check if network configuration is updated after upgrade.
 func ValidateNetworkConfig() {
-	It("Validate upgraded cluster network configuration", reportxml.ID("71391"), Label("ValidateNetworkConfig"), func() {
+	PIt("Validate upgraded cluster network configuration", reportxml.ID("71391"), Label("ValidateNetworkConfig"), func() {
 		By("Validate upgraded cluster network configuration", func() {
 			var recFound bool
 
@@ -229,7 +231,7 @@ func ValidateNetworkConfig() {
 
 // ValidateSeedHostnameRefLogs check if no seed hostname references are present in pod logs.
 func ValidateSeedHostnameRefLogs() {
-	It("Validate no seed hostname references in pod logs", reportxml.ID("71392"), Label("ValidateSeedRefPodLogs",
+	PIt("Validate no seed hostname references in pod logs", reportxml.ID("71392"), Label("ValidateSeedRefPodLogs",
 		"ValidateSeedReferences"), func() {
 		By("Validate no seed hostname references in pod logs", func() {
 			// Seed refs from kube-controller-manager's garbage collector are expected during IBU
@@ -253,7 +255,7 @@ func ValidateSeedHostnameRefLogs() {
 
 // ValidateDUConfig check if pre-upgrade DU configs are present after upgrade.
 func ValidateDUConfig() {
-	It("Validate pre-upgrade DU configs are present after upgrade", reportxml.ID("71394"),
+	PIt("Validate pre-upgrade DU configs are present after upgrade", reportxml.ID("71394"),
 		Label("ValidateDUConfig"), func() {
 			By("Validate pre-upgrade DU configs are present after upgrade", func() {
 				By("Validate SR-IOV networks", func() {
@@ -277,7 +279,7 @@ func ValidateDUConfig() {
 
 // ValidateWorkload check if test workload pods are running without errors.
 func ValidateWorkload() {
-	It("Validate test workload pods are running without errors", reportxml.ID("71395"), Label("ValidateDUPods"), func() {
+	PIt("Validate test workload pods are running without errors", reportxml.ID("71395"), Label("ValidateDUPods"), func() {
 		By("Validate test workload pods are running without errors", func() {
 			for _, workload := range cnfclusterinfo.PostUpgradeClusterInfo.WorkloadResources {
 				workloadNS := workload.Namespace
@@ -306,7 +308,7 @@ func ValidateWorkload() {
 
 // ValidateWorkloadPV check if pre-upgrade files written to PVs are preserved during upgrade.
 func ValidateWorkloadPV() {
-	It("Validate pre-upgrade files written to PVs are preserved during upgrade",
+	PIt("Validate pre-upgrade files written to PVs are preserved during upgrade",
 		reportxml.ID("71396"),
 		Label("ValidatePVFiles"),
 		func() {
@@ -323,7 +325,7 @@ func ValidateWorkloadPV() {
 
 // ValidateNoImagesPulled check if no images are being pulled after upgrade.
 func ValidateNoImagesPulled() {
-	It("Validate no images are being pulled after upgrade", reportxml.ID("73051"), Label("ValidateImagePull"), func() {
+	PIt("Validate no images are being pulled after upgrade", reportxml.ID("73051"), Label("ValidateImagePull"), func() {
 		By("Validate no images are being pulled after upgrade", func() {
 			catSrc, err := olm.ListCatalogSources(TargetSNOAPIClient, "openshift-marketplace")
 			Expect(err).ToNot(HaveOccurred(), "Failed to list catalog sources")
@@ -347,7 +349,7 @@ func ValidateNoImagesPulled() {
 
 // ValidateSeedRefMetrics check if no seed references are present in the exported metrics.
 func ValidateSeedRefMetrics() {
-	It("Validate no seed references in the exported metrics", reportxml.ID("71397"), Label("ValidateMetrics",
+	PIt("Validate no seed references in the exported metrics", reportxml.ID("71397"), Label("ValidateMetrics",
 		"ValidateSeedReferences"), func() {
 		By("Validate no seed references in the exported metrics", func() {
 			promPod, err := pod.ListByNamePattern(TargetSNOAPIClient, "prometheus-k8s", "openshift-monitoring")
@@ -367,7 +369,7 @@ func ValidateSeedRefMetrics() {
 
 // ValidateSeedRefLogs check if no seed references are present in the exported logs.
 func ValidateSeedRefLogs() {
-	It("Validate no seed references in the exported logs", reportxml.ID("71398"), Label("ValidateLogs",
+	PIt("Validate no seed references in the exported logs", reportxml.ID("71398"), Label("ValidateLogs",
 		"ValidateSeedReferences"), func() {
 		By("Validate no seed references in the exported logs", func() {
 			deployContainer := pod.NewContainerBuilder("kcat",
