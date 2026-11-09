@@ -39,6 +39,8 @@ const (
 		"specified in the rolloutStrategy"
 
 	manifestWorkReplicaSetLabel = "work.open-cluster-management.io/manifestworkreplicaset"
+	// clusterGroupUpgradeLabel is set by TALM on the ManifestWork for one CGU plan item.
+	clusterGroupUpgradeLabel = "openshift-cluster-group-upgrades/clusterGroupUpgrade"
 )
 
 // spokeConditionField selects which ImageBasedUpgrade condition field is compared to ManifestWork feedback.
@@ -256,8 +258,9 @@ func waitForSpokeFeedback(
 	replicaSetName := manifestWorkReplicaSetName(ibguName, action)
 
 	var (
-		lastStatus string
-		matched    string
+		lastStatus          string
+		matched             string
+		rememberedSpokeText string
 	)
 
 	pollErr := wait.PollUntilContextTimeout(
@@ -269,7 +272,8 @@ func waitForSpokeFeedback(
 			)
 
 			matched, done, sampleErr = spokeFeedbackPoll(
-				clusterNamespace, replicaSetName, feedbackName, conditionType, field, failIf)
+				clusterNamespace, replicaSetName, feedbackName, conditionType, field, failIf,
+				&rememberedSpokeText)
 			if sampleErr != nil {
 				return false, sampleErr
 			}
@@ -296,14 +300,12 @@ func waitForSpokeFeedback(
 // The string result is the matched feedback, or a status description when still waiting.
 func spokeFeedbackPoll(
 	clusterNamespace, replicaSetName, feedbackName, conditionType string,
-	field spokeConditionField, failIf SpokeIBUState,
+	field spokeConditionField, failIf SpokeIBUState, rememberedSpokeText *string,
 ) (string, bool, error) {
-	imageUpgrade, err := pullSpokeIBU()
-	if err != nil {
-		return err.Error(), false, nil
+	want, imageUpgrade, pullStatus := spokeConditionSample(conditionType, field, rememberedSpokeText)
+	if pullStatus != "" {
+		return pullStatus, false, nil
 	}
-
-	want := spokeConditionText(imageUpgrade, conditionType, field)
 
 	values, listErr := manifestWorkFeedbackValues(clusterNamespace, replicaSetName, feedbackName)
 	if listErr != nil {
@@ -316,13 +318,37 @@ func spokeFeedbackPoll(
 		}
 	}
 
-	if failIf != "" && matchesSpokeState(imageUpgrade, failIf) {
+	if imageUpgrade != nil && failIf != "" && matchesSpokeState(imageUpgrade, failIf) {
 		return "", false, fmt.Errorf(
 			"rollout timeout was too long: spoke IBU reached %s before ManifestWork reported %s (%s)",
 			failIf, feedbackName, formatIBU(imageUpgrade))
 	}
 
-	return fmt.Sprintf("feedback=%v spoke %s=%q (%s)", values, conditionType, want, formatIBU(imageUpgrade)), false, nil
+	return feedbackWaitStatus(
+		clusterNamespace, replicaSetName, values, conditionType, want, imageUpgrade), false, nil
+}
+
+// spokeConditionSample reads the live spoke condition text. After the spoke API drops the
+// ImageBasedUpgrade during pivot, it keeps the last non-empty text so ManifestWork feedback
+// can still be compared to the message that was on the spoke.
+func spokeConditionSample(
+	conditionType string, field spokeConditionField, rememberedSpokeText *string,
+) (string, *lca.ImageBasedUpgradeBuilder, string) {
+	imageUpgrade, err := pullSpokeIBU()
+	if err != nil {
+		if rememberedSpokeText != nil && *rememberedSpokeText != "" {
+			return *rememberedSpokeText, nil, ""
+		}
+
+		return "", nil, err.Error()
+	}
+
+	want := spokeConditionText(imageUpgrade, conditionType, field)
+	if want != "" && rememberedSpokeText != nil {
+		*rememberedSpokeText = want
+	}
+
+	return want, imageUpgrade, ""
 }
 
 // unexpectedFailedActionOutcome fail-fasts when the IBGU can no longer gain the LCA condition text.
@@ -476,19 +502,87 @@ func listSpokeManifestWorks(clusterNamespace string) ([]mwv1.ManifestWork, error
 }
 
 // workBelongsToReplicaSet reports whether the ManifestWork was generated for replicaSetName.
+// The OCM replica-set controller names the work "<IBGU namespace>.<replica set>-<suffix>".
+// TALM also labels it with the ClusterGroupUpgrade "<replica set>-<plan index>".
 func workBelongsToReplicaSet(work *mwv1.ManifestWork, replicaSetName string) bool {
-	if work == nil {
+	if work == nil || replicaSetName == "" {
 		return false
 	}
 
-	if work.Labels != nil {
-		owner := work.Labels[manifestWorkReplicaSetLabel]
-		if owner == IbguNamespace+"."+replicaSetName || owner == replicaSetName {
-			return true
-		}
+	if manifestWorkNameMatchesReplicaSet(work.Name, replicaSetName) {
+		return true
 	}
 
-	return strings.HasPrefix(work.Name, replicaSetName)
+	if work.Labels == nil {
+		return false
+	}
+
+	owner := work.Labels[manifestWorkReplicaSetLabel]
+	if owner == replicaSetName || owner == IbguNamespace+"."+replicaSetName {
+		return true
+	}
+
+	cguName := work.Labels[clusterGroupUpgradeLabel]
+
+	return cguName == replicaSetName || strings.HasPrefix(cguName, replicaSetName+"-")
+}
+
+// manifestWorkNameMatchesReplicaSet reports whether workName is the replica set's ManifestWork.
+func manifestWorkNameMatchesReplicaSet(workName, replicaSetName string) bool {
+	if workName == replicaSetName || strings.HasPrefix(workName, replicaSetName+"-") {
+		return true
+	}
+
+	return strings.HasPrefix(workName, IbguNamespace+"."+replicaSetName+"-")
+}
+
+// feedbackWaitStatus describes the current feedback sample, including hub works that mention
+// the replica set when none of them contributed a value.
+func feedbackWaitStatus(
+	clusterNamespace, replicaSetName string, values []string, conditionType, want string,
+	imageUpgrade *lca.ImageBasedUpgradeBuilder,
+) string {
+	ibu := "imagebasedupgrade unavailable"
+	if imageUpgrade != nil {
+		ibu = formatIBU(imageUpgrade)
+	}
+
+	status := fmt.Sprintf("feedback=%v spoke %s=%q (%s)", values, conditionType, want, ibu)
+	if len(values) != 0 {
+		return status
+	}
+
+	return status + " " + manifestWorksMentioningReplicaSet(clusterNamespace, replicaSetName)
+}
+
+// manifestWorksMentioningReplicaSet lists spoke ManifestWorks whose name or TALM label contains replicaSetName.
+func manifestWorksMentioningReplicaSet(clusterNamespace, replicaSetName string) string {
+	works, err := listSpokeManifestWorks(clusterNamespace)
+	if err != nil {
+		return "works=" + err.Error()
+	}
+
+	var related []string
+
+	for workIndex := range works {
+		work := &works[workIndex]
+		if !strings.Contains(work.Name, replicaSetName) &&
+			!strings.Contains(work.Labels[clusterGroupUpgradeLabel], replicaSetName) &&
+			!strings.Contains(work.Labels[manifestWorkReplicaSetLabel], replicaSetName) {
+			continue
+		}
+
+		related = append(related, fmt.Sprintf("%s mwrs=%q cgu=%q",
+			work.Name,
+			work.Labels[manifestWorkReplicaSetLabel],
+			work.Labels[clusterGroupUpgradeLabel]))
+	}
+
+	if len(related) == 0 {
+		return fmt.Sprintf("works=none mentioning %s (%d in %s)", replicaSetName, len(works), clusterNamespace)
+	}
+
+	return "works=[" + strings.Join(related, "; ") + "]"
 }
 
 // feedbackStrings collects non-empty status feedback values with feedbackName.
