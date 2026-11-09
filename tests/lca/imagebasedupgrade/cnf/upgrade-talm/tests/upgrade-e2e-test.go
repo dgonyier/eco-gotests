@@ -61,7 +61,9 @@ var _ = Describe(
 			cnfibuvalidations.UpgradeSucceeded = false
 		})
 
-		// 68954 - Upgrade end to end
+		// 68954 - Upgrade end to end.
+		// Kept as setup for 69058. A successful upgrade stays in place until
+		// 69058 rolls the spoke back to Idle.
 		It("Upgrade end to end", reportxml.ID("68954"), func() {
 			By("Creating Prep+Upgrade IBGU")
 
@@ -106,7 +108,9 @@ var _ = Describe(
 
 		cnfibuvalidations.PostUpgradeValidations()
 
-		// 69058 - Rollback successful upgrade
+		// 69058 - Rollback successful upgrade.
+		// OCPBUGS-134615 Rollback and FinalizeRollback feedback.
+		// FinalizeRollback returns the spoke to Idle.
 		It(tsparams.SpecRollbackSuccessfulUpgrade, reportxml.ID("69058"), func() {
 			if !cnfibuvalidations.UpgradeSucceeded {
 				Skip("Rollback test 69058 requires a successful 68954 upgrade")

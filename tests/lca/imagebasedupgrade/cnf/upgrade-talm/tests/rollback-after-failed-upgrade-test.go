@@ -41,8 +41,10 @@ var _ = Describe(
 			deleteIbgusAndRecoverIfFailed()
 		})
 
-		// 69054 - Rollback after a failed upgrade
-		It("Rollback after a failed upgrade", reportxml.ID("69054"), func() {
+		// 69054 - Rollback after a failed upgrade.
+		// Pending for the OCPBUGS-134615 run. LCA auto-rollback does not create
+		// the Rollback ManifestWork this bug is about.
+		PIt("Rollback after a failed upgrade", reportxml.ID("69054"), func() {
 			By("Creating Prep->Upgrade->FinalizeUpgrade IBGU with auto-rollback on failure")
 
 			_, err := cnfhelper.NewIbgu(tsparams.IbguName).
