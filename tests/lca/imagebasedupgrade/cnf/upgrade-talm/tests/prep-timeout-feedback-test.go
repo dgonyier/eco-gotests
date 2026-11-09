@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	// prepFeedbackRolloutTimeoutMinutes is shorter than a real Prep so the CGU times out
-	// while the spoke ImageBasedUpgrade still has a PrepInProgress message.
-	prepFeedbackRolloutTimeoutMinutes = 10
+	// prepFeedbackRolloutTimeoutMinutes is shorter than stateroot and precache on the
+	// spoke, so the CGU times out while PrepInProgress still has a message.
+	prepFeedbackRolloutTimeoutMinutes = 2
 	abortAfterPrepTimeoutMinutes      = 20
 
 	manifestWorkReplicaSetPathTimeout = 3 * time.Minute
