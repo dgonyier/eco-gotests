@@ -46,6 +46,14 @@ const (
 // spokeConditionField selects which ImageBasedUpgrade condition field is compared to ManifestWork feedback.
 type spokeConditionField int
 
+// spokeTextHistory is the non-empty condition text seen while a feedback check runs.
+// TALM copies whichever message is current when it reads status, so a later sample
+// replaces the one that was current when the ManifestWork first updated.
+type spokeTextHistory struct {
+	texts   []string
+	sawWork bool
+}
+
 const (
 	spokeConditionMessage spokeConditionField = iota
 	spokeConditionReason
@@ -137,7 +145,9 @@ func WaitForIdleReasonFeedback(ibguName, action, clusterNamespace string, timeou
 }
 
 // WaitForFailedActionMessage waits until the IBGU reports a failed action whose message contains
-// wantMessage and is not only the generic rollout-timeout fallback.
+// LCA condition text and is not only the generic rollout-timeout fallback.
+// wantMessage is the first text observed on the spoke. Later condition messages are recorded
+// too, because TALM joins every ConditionMessage feedback value at timeout into one string.
 func WaitForFailedActionMessage(
 	ibguName, clusterName, action, wantMessage string, timeout time.Duration) error {
 	if err := validateHubClient(ibguName); err != nil {
@@ -157,11 +167,18 @@ func WaitForFailedActionMessage(
 		return fmt.Errorf("failed to build IBGU client for %s", ibguName)
 	}
 
-	var lastStatus string
+	var (
+		lastStatus string
+		history    spokeTextHistory
+	)
+
+	history.add(wantMessage)
 
 	pollErr := wait.PollUntilContextTimeout(
 		context.TODO(), ibguPollInterval, timeout, true,
 		func(_ context.Context) (bool, error) {
+			recordActionConditionTexts(action, &history)
+
 			object, err := builder.Get()
 			if err != nil {
 				lastStatus = err.Error()
@@ -171,13 +188,14 @@ func WaitForFailedActionMessage(
 			}
 
 			message, found := failedActionMessage(object, clusterName, action)
-			lastStatus = fmt.Sprintf("%s failedAction=%q", formatIbgu(object), message)
+			lastStatus = fmt.Sprintf("%s failedAction=%q observed=%q", formatIbgu(object), message, history.texts)
 
-			if found && message != genericIBGUTimeoutMessage && strings.Contains(message, wantMessage) {
+			if failedActionHasLCAText(message, found, &history) {
 				return true, nil
 			}
 
-			if failErr := unexpectedFailedActionOutcome(ibguName, action, message, found, object); failErr != nil {
+			if failErr := unexpectedFailedActionOutcome(
+				ibguName, action, message, found, object, &history); failErr != nil {
 				return false, failErr
 			}
 
@@ -186,8 +204,8 @@ func WaitForFailedActionMessage(
 			return false, nil
 		})
 	if pollErr != nil {
-		return fmt.Errorf("IBGU %s action %s did not report %q within %s: %w (last: %s)",
-			ibguName, action, wantMessage, timeout, pollErr, lastStatus)
+		return fmt.Errorf("IBGU %s action %s did not report LCA condition text within %s: %w (last: %s)",
+			ibguName, action, timeout, pollErr, lastStatus)
 	}
 
 	return nil
@@ -258,9 +276,9 @@ func waitForSpokeFeedback(
 	replicaSetName := manifestWorkReplicaSetName(ibguName, action)
 
 	var (
-		lastStatus          string
-		matched             string
-		rememberedSpokeText string
+		lastStatus string
+		matched    string
+		history    spokeTextHistory
 	)
 
 	pollErr := wait.PollUntilContextTimeout(
@@ -272,8 +290,7 @@ func waitForSpokeFeedback(
 			)
 
 			matched, done, sampleErr = spokeFeedbackPoll(
-				clusterNamespace, replicaSetName, feedbackName, conditionType, field, failIf,
-				&rememberedSpokeText)
+				clusterNamespace, replicaSetName, feedbackName, conditionType, field, failIf, &history)
 			if sampleErr != nil {
 				return false, sampleErr
 			}
@@ -300,22 +317,22 @@ func waitForSpokeFeedback(
 // The string result is the matched feedback, or a status description when still waiting.
 func spokeFeedbackPoll(
 	clusterNamespace, replicaSetName, feedbackName, conditionType string,
-	field spokeConditionField, failIf SpokeIBUState, rememberedSpokeText *string,
+	field spokeConditionField, failIf SpokeIBUState, history *spokeTextHistory,
 ) (string, bool, error) {
-	want, imageUpgrade, pullStatus := spokeConditionSample(conditionType, field, rememberedSpokeText)
+	want, imageUpgrade, pullStatus := spokeConditionSample(conditionType, field, history)
 	if pullStatus != "" {
 		return pullStatus, false, nil
 	}
 
-	values, listErr := manifestWorkFeedbackValues(clusterNamespace, replicaSetName, feedbackName)
+	values, belonging, listErr := manifestWorkFeedbackValues(clusterNamespace, replicaSetName, feedbackName)
 	if listErr != nil {
 		return listErr.Error(), false, nil
 	}
 
-	for _, value := range values {
-		if value == want && want != "" {
-			return value, true, nil
-		}
+	history.noteWork(belonging)
+
+	if matched := history.equal(values); matched != "" {
+		return matched, true, nil
 	}
 
 	if imageUpgrade != nil && failIf != "" && matchesSpokeState(imageUpgrade, failIf) {
@@ -324,37 +341,62 @@ func spokeFeedbackPoll(
 			failIf, feedbackName, formatIBU(imageUpgrade))
 	}
 
+	if feedbackNoLongerPossible(imageUpgrade, belonging, history) {
+		return "", false, fmt.Errorf(
+			"spoke %s was cleared and no ManifestWork for %s remains; observed %q",
+			conditionType, replicaSetName, history.texts)
+	}
+
 	return feedbackWaitStatus(
 		clusterNamespace, replicaSetName, values, conditionType, want, imageUpgrade), false, nil
 }
 
 // spokeConditionSample reads the live spoke condition text. After the spoke API drops the
-// ImageBasedUpgrade during pivot, it keeps the last non-empty text so ManifestWork feedback
-// can still be compared to the message that was on the spoke.
+// ImageBasedUpgrade during pivot, earlier non-empty text stays in history so ManifestWork
+// feedback can still be compared to a message that was on the spoke.
 func spokeConditionSample(
-	conditionType string, field spokeConditionField, rememberedSpokeText *string,
+	conditionType string, field spokeConditionField, history *spokeTextHistory,
 ) (string, *lca.ImageBasedUpgradeBuilder, string) {
 	imageUpgrade, err := pullSpokeIBU()
 	if err != nil {
-		if rememberedSpokeText != nil && *rememberedSpokeText != "" {
-			return *rememberedSpokeText, nil, ""
+		if history.len() > 0 {
+			return "", nil, ""
 		}
 
 		return "", nil, err.Error()
 	}
 
 	want := spokeConditionText(imageUpgrade, conditionType, field)
-	if want != "" && rememberedSpokeText != nil {
-		*rememberedSpokeText = want
-	}
+	history.add(want)
 
 	return want, imageUpgrade, ""
 }
 
+// feedbackNoLongerPossible reports that a ManifestWork which had been created is gone.
+// The check stops instead of polling until timeout after TALM deletes the work.
+func feedbackNoLongerPossible(
+	imageUpgrade *lca.ImageBasedUpgradeBuilder, belonging int, history *spokeTextHistory,
+) bool {
+	return imageUpgrade != nil && history.sawWork && belonging == 0 && history.len() > 0
+}
+
+// failedActionHasLCAText reports that TALM copied LCA condition text into the failed action.
+func failedActionHasLCAText(message string, found bool, history *spokeTextHistory) bool {
+	return found && message != "" && message != genericIBGUTimeoutMessage && history.containsFragment(message)
+}
+
 // unexpectedFailedActionOutcome fail-fasts when the IBGU can no longer gain the LCA condition text.
+// A generic timeout message is final: TALM does not replace the first failed-action entry.
 func unexpectedFailedActionOutcome(
 	ibguName, action, message string, found bool, object *ibguv1alpha1.ImageBasedGroupUpgrade,
+	history *spokeTextHistory,
 ) error {
+	if found && message == genericIBGUTimeoutMessage {
+		return fmt.Errorf(
+			"IBGU %s action %s failed with only the generic timeout message %q",
+			ibguName, action, message)
+	}
+
 	if !ibguReasonIs(object, reasonCompleted) {
 		return nil
 	}
@@ -365,13 +407,119 @@ func unexpectedFailedActionOutcome(
 			ibguName, action)
 	}
 
-	if message == genericIBGUTimeoutMessage {
-		return fmt.Errorf(
-			"IBGU %s action %s failed with only the generic timeout message %q",
-			ibguName, action, message)
+	return fmt.Errorf(
+		"IBGU %s action %s completed with %q, which does not include observed LCA text %q",
+		ibguName, action, message, history.texts)
+}
+
+// recordActionConditionTexts stores the current LCA messages for action.
+func recordActionConditionTexts(action string, history *spokeTextHistory) {
+	imageUpgrade, err := pullSpokeIBU()
+	if err != nil {
+		return
 	}
 
-	return nil
+	for _, sample := range conditionSamplesForAction(action) {
+		history.add(spokeConditionText(imageUpgrade, sample.conditionType, sample.field))
+	}
+}
+
+// conditionSample is one IBU condition field TALM may copy into a failed action.
+type conditionSample struct {
+	conditionType string
+	field         spokeConditionField
+}
+
+// conditionSamplesForAction lists the condition fields whose text TALM joins for action.
+func conditionSamplesForAction(action string) []conditionSample {
+	switch action {
+	case ibguv1alpha1.Prep:
+		return []conditionSample{
+			{conditionPrepInProgress, spokeConditionMessage},
+			{conditionPrepCompleted, spokeConditionMessage},
+		}
+	case ibguv1alpha1.Upgrade:
+		return []conditionSample{
+			{conditionUpgradeInProgress, spokeConditionMessage},
+			{conditionUpgradeCompleted, spokeConditionMessage},
+		}
+	case ibguv1alpha1.Rollback:
+		return []conditionSample{
+			{conditionRollbackInProgress, spokeConditionMessage},
+			{conditionRollbackCompleted, spokeConditionMessage},
+		}
+	default:
+		return []conditionSample{
+			{conditionIdle, spokeConditionReason},
+			{conditionIdle, spokeConditionMessage},
+		}
+	}
+}
+
+func (history *spokeTextHistory) add(text string) {
+	if history == nil {
+		return
+	}
+
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return
+	}
+
+	for _, existing := range history.texts {
+		if existing == text {
+			return
+		}
+	}
+
+	history.texts = append(history.texts, text)
+}
+
+func (history *spokeTextHistory) len() int {
+	if history == nil {
+		return 0
+	}
+
+	return len(history.texts)
+}
+
+func (history *spokeTextHistory) noteWork(belonging int) {
+	if history != nil && belonging > 0 {
+		history.sawWork = true
+	}
+}
+
+// equal returns the feedback value that exactly matches a recorded spoke condition text.
+func (history *spokeTextHistory) equal(values []string) string {
+	if history == nil {
+		return ""
+	}
+
+	for _, value := range values {
+		for _, text := range history.texts {
+			if value == text {
+				return value
+			}
+		}
+	}
+
+	return ""
+}
+
+// containsFragment reports whether message includes a recorded spoke condition text.
+// TALM joins several feedback values with newlines, so the failed action is not one field.
+func (history *spokeTextHistory) containsFragment(message string) bool {
+	if history == nil {
+		return false
+	}
+
+	for _, text := range history.texts {
+		if text != "" && strings.Contains(message, text) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // failedActionMessage returns the failed action message for clusterName and action.
@@ -460,13 +608,19 @@ func feedbackPathFromReplicaSet(replicaSet *unstructured.Unstructured, feedbackN
 }
 
 // manifestWorkFeedbackValues lists non-empty feedback strings for replicaSetName in the spoke namespace.
-func manifestWorkFeedbackValues(clusterNamespace, replicaSetName, feedbackName string) ([]string, error) {
+// belonging is how many ManifestWorks were selected for that replica set.
+func manifestWorkFeedbackValues(
+	clusterNamespace, replicaSetName, feedbackName string,
+) ([]string, int, error) {
 	works, err := listSpokeManifestWorks(clusterNamespace)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	var values []string
+	var (
+		values    []string
+		belonging int
+	)
 
 	for workIndex := range works {
 		work := &works[workIndex]
@@ -474,10 +628,12 @@ func manifestWorkFeedbackValues(clusterNamespace, replicaSetName, feedbackName s
 			continue
 		}
 
+		belonging++
+
 		values = append(values, feedbackStrings(work, feedbackName)...)
 	}
 
-	return values, nil
+	return values, belonging, nil
 }
 
 // listSpokeManifestWorks returns hub ManifestWorks in the managed cluster namespace.
@@ -572,10 +728,11 @@ func manifestWorksMentioningReplicaSet(clusterNamespace, replicaSetName string) 
 			continue
 		}
 
-		related = append(related, fmt.Sprintf("%s mwrs=%q cgu=%q",
+		related = append(related, fmt.Sprintf("%s mwrs=%q cgu=%q %s",
 			work.Name,
 			work.Labels[manifestWorkReplicaSetLabel],
-			work.Labels[clusterGroupUpgradeLabel]))
+			work.Labels[clusterGroupUpgradeLabel],
+			describeWorkFeedback(work)))
 	}
 
 	if len(related) == 0 {
@@ -586,6 +743,7 @@ func manifestWorksMentioningReplicaSet(clusterNamespace, replicaSetName string) 
 }
 
 // feedbackStrings collects non-empty status feedback values with feedbackName.
+// JSONPath filters can be stored as a raw JSON string as well as a plain string.
 func feedbackStrings(work *mwv1.ManifestWork, feedbackName string) []string {
 	if work == nil {
 		return nil
@@ -595,20 +753,98 @@ func feedbackStrings(work *mwv1.ManifestWork, feedbackName string) []string {
 
 	for _, manifest := range work.Status.ResourceStatus.Manifests {
 		for _, feedback := range manifest.StatusFeedbacks.Values {
-			if feedback.Name != feedbackName || feedback.Value.String == nil {
+			if feedback.Name != feedbackName {
 				continue
 			}
 
-			text := strings.TrimSpace(*feedback.Value.String)
-			if text == "" {
-				continue
-			}
-
-			values = append(values, text)
+			values = append(values, feedbackValueTexts(feedback.Value)...)
 		}
 	}
 
 	return values
+}
+
+// feedbackValueTexts returns the string forms of one feedback field.
+func feedbackValueTexts(value mwv1.FieldValue) []string {
+	if value.String != nil {
+		return nonEmptyTexts([]string{*value.String})
+	}
+
+	if value.JsonRaw == nil {
+		return nil
+	}
+
+	raw := strings.TrimSpace(*value.JsonRaw)
+	if raw == "" {
+		return nil
+	}
+
+	var one string
+	if err := json.Unmarshal([]byte(raw), &one); err == nil {
+		return nonEmptyTexts([]string{one})
+	}
+
+	var many []string
+	if err := json.Unmarshal([]byte(raw), &many); err == nil {
+		return nonEmptyTexts(many)
+	}
+
+	return nil
+}
+
+// nonEmptyTexts trims and drops blank feedback strings.
+func nonEmptyTexts(texts []string) []string {
+	var values []string
+
+	for _, text := range texts {
+		text = strings.TrimSpace(text)
+		if text == "" {
+			continue
+		}
+
+		values = append(values, text)
+	}
+
+	return values
+}
+
+// describeWorkFeedback summarizes status feedback names on one ManifestWork.
+func describeWorkFeedback(work *mwv1.ManifestWork) string {
+	if work == nil {
+		return "statusFeedback=[]"
+	}
+
+	var parts []string
+
+	for _, manifest := range work.Status.ResourceStatus.Manifests {
+		for _, feedback := range manifest.StatusFeedbacks.Values {
+			parts = append(parts, feedback.Name+"="+feedbackValuePreview(feedback.Value))
+			if len(parts) == 4 {
+				return "statusFeedback=[" + strings.Join(parts, ", ") + ", ...]"
+			}
+		}
+	}
+
+	if len(parts) == 0 {
+		return "statusFeedback=[]"
+	}
+
+	return "statusFeedback=[" + strings.Join(parts, ", ") + "]"
+}
+
+// feedbackValuePreview is a short log form of one feedback field.
+func feedbackValuePreview(value mwv1.FieldValue) string {
+	texts := feedbackValueTexts(value)
+	if len(texts) == 0 {
+		return fmt.Sprintf("%q", string(value.Type))
+	}
+
+	text := texts[0]
+	if len(text) > 60 {
+		text = text[:60] + "..."
+	}
+
+	return fmt.Sprintf("%q", text)
 }
 
 // spokeConditionText returns the spoke condition message or reason.
