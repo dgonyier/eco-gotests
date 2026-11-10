@@ -13,8 +13,10 @@ import (
 )
 
 const (
-	// prepFeedbackRolloutTimeoutMinutes is shorter than stateroot and precache on the
-	// spoke, so the CGU times out while PrepInProgress still has a message.
+	// prepFeedbackRolloutTimeoutMinutes is long enough for OCM to copy a condition
+	// message and short enough that Prep still times out on a warm spoke. The
+	// failed action then contains the LCA text from that moment, which may be
+	// the completion message rather than the first stateroot line.
 	prepFeedbackRolloutTimeoutMinutes = 2
 	abortAfterPrepTimeoutMinutes      = 20
 
@@ -70,12 +72,12 @@ var _ = Describe(
 			Expect(err).NotTo(HaveOccurred(),
 				"Prep ManifestWork did not report the spoke PrepInProgress message")
 
-			By("Waiting until the timed-out IBGU failed action contains that LCA message")
+			By("Waiting until the timed-out IBGU failed action contains LCA condition text")
 
 			Expect(cnfhelper.WaitForFailedActionMessage(
 				tsparams.PrepTimeoutIbguName, tsparams.TargetSnoClusterName, ibguv1alpha1.Prep,
 				prepMessage, prepFailedActionTimeout)).To(Succeed(),
-				"IBGU failedActions did not include the spoke PrepInProgress message")
+				"IBGU failedActions did not include an LCA Prep condition message")
 
 			By("Verifying the Abort ManifestWorkReplicaSet Idle reason JSONPath")
 

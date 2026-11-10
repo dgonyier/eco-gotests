@@ -58,22 +58,27 @@ var _ = Describe(
 			Expect(cnfhelper.WaitForSpokeIBU(cnfhelper.SpokeUpgradeInProgress, 10*time.Minute)).To(Succeed(),
 				"Upgrade did not start on the spoke IBU before pivot")
 
-			By("Verifying Upgrade ManifestWork surfaces the LCA UpgradeInProgress message")
+			By("Verifying the Upgrade ManifestWorkReplicaSet feedback JSONPath")
 
 			Expect(cnfhelper.WaitForUpgradeFeedbackPath(tsparams.IbguName, 3*time.Minute)).To(Succeed(),
 				"Upgrade ManifestWorkReplicaSet feedback path is malformed")
 
-			_, err = cnfhelper.WaitForUpgradeInProgressFeedback(
-				tsparams.IbguName, tsparams.TargetSnoClusterName, 5*time.Minute)
-			Expect(err).NotTo(HaveOccurred(),
-				"Upgrade ManifestWork did not report the spoke UpgradeInProgress message")
-
-			By("Creating abort IBGU")
+			// Abort before reading feedback. Upgrade pivots in about a minute, which
+			// is before OCM reports status, and the spoke API then disappears.
+			// Abort keeps the API up so the UpgradeInProgress message can be copied.
+			By("Creating abort IBGU before the upgrade pivots")
 
 			abortIbgu, err := cnfhelper.NewIbgu(tsparams.AbortIbguName).
 				WithPlan([]string{ibguv1alpha1.Abort}, 20, 20).
 				Create()
 			Expect(err).ToNot(HaveOccurred(), "Failed to create abort IBGU")
+
+			By("Waiting until Upgrade ManifestWork reports the spoke UpgradeInProgress message")
+
+			_, err = cnfhelper.WaitForUpgradeInProgressFeedback(
+				tsparams.IbguName, tsparams.TargetSnoClusterName, 3*time.Minute)
+			Expect(err).NotTo(HaveOccurred(),
+				"Upgrade ManifestWork did not report the spoke UpgradeInProgress message")
 
 			By("Waiting until spoke IBU returns to Idle")
 

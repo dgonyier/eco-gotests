@@ -125,15 +125,14 @@ var _ = Describe(
 				Create()
 			Expect(err).ToNot(HaveOccurred(), "Failed to create rollback Ibgu.")
 
-			By("Verifying Rollback ManifestWork surfaces the LCA RollbackInProgress message")
+			// RollbackInProgress is emitted while the node reboots, and that ManifestWork
+			// does not gain the message after the API returns. The JSONPath check
+			// covers that feedback rule. FinalizeRollback is applied once the spoke
+			// is back, so its Idle reason is the value that can be compared live.
+			By("Verifying the Rollback ManifestWorkReplicaSet feedback JSONPath")
 
 			Expect(cnfhelper.WaitForRollbackFeedbackPath(tsparams.IbguName, 3*time.Minute)).To(Succeed(),
 				"Rollback ManifestWorkReplicaSet feedback path is malformed")
-
-			_, err = cnfhelper.WaitForRollbackInProgressFeedback(
-				tsparams.IbguName, tsparams.TargetSnoClusterName, 15*time.Minute)
-			Expect(err).NotTo(HaveOccurred(),
-				"Rollback ManifestWork did not report the spoke RollbackInProgress message")
 
 			By("Waiting until spoke IBU Rollback completes")
 
